@@ -43,11 +43,6 @@ class UserService:
         return db.session.get(User, user_id)
 
     @staticmethod
-    def get_active_user(user_id):
-        """Get only active user by ID"""
-        return User.query.filter_by(id=user_id, is_deleted=False).first()
-
-    @staticmethod
     def update_user(user_id, data):
         """Update user data with role validation if provided"""
         VALID_ROLES = ['Faculty', 'Technical Admin', 'UTLDO Admin', 'Evaluator'] 

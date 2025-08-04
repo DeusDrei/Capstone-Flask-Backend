@@ -21,7 +21,7 @@ class User(db.Model):
     is_deleted = db.Column(db.Boolean, default=False)
 
     def __init__(self, role, faculty_id, first_name, last_name, email, password, phone_number, birth_date,
-                 created_by, updated_by, middle_name=None, phone=None):
+                 created_by, updated_by, middle_name=None):
         self.role = role
         self.faculty_id = faculty_id
         self.first_name = first_name
@@ -33,7 +33,6 @@ class User(db.Model):
         self.updated_by = updated_by
         self.created_by = created_by
         self.middle_name = middle_name
-        self.phone = phone
 
     def __repr__(self):
         return f'<User {self.id}: {self.first_name} {self.last_name}>'
