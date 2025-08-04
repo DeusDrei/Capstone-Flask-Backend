@@ -2,11 +2,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from .config import Config
 from .extensions import db, migrate, api, ma, jwt
-from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint
+from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint
 
 from .seeds.users import register_commands as register_users
 from .seeds.departments import register_commands as register_departments
 from .seeds.colleges import register_commands as register_colleges
+from .seeds.subjects import register_commands as register_subjects
 
 def create_app():
     app = Flask(__name__)
@@ -26,11 +27,13 @@ def create_app():
     register_users(app)
     register_departments(app)
     register_colleges(app)
+    register_subjects(app)
     
     api.register_blueprint(auth_blueprint)
     api.register_blueprint(user_blueprint)
     api.register_blueprint(department_blueprint)
     api.register_blueprint(college_blueprint)
+    api.register_blueprint(subject_blueprint)
 
     
     return app
