@@ -3,7 +3,7 @@ from marshmallow import Schema, fields, validate
 class UserSchema(Schema):
     id = fields.Int(dump_only=True)
     role = fields.Str(required=True)
-    faculty_id = fields.Str(required=True, validate=validate.Length(min=1))
+    staff_id = fields.Str(required=True, validate=validate.Length(min=1))
     first_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     middle_name = fields.Str(validate=validate.Length(max=50), allow_none=True)
     last_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))

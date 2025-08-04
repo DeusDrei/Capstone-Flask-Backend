@@ -24,7 +24,7 @@ class SubjectTestCase(TestCase):
         # Register a test user
         register_response = self.client.post("/auth/register", json={
             "role": "Technical Admin",
-            "faculty_id": "TEST123",
+            "staff_id": "TEST123",
             "first_name": "Test",
             "middle_name": "T.",
             "last_name": "User",

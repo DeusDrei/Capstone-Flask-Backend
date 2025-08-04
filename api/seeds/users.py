@@ -20,7 +20,7 @@ def seed_users():
     users = [
         {
             "role": "Technical Admin", 
-            "faculty_id": "ADMIN001",
+            "staff_id": "ADMIN001",
             "first_name": "System",
             "middle_name": "",
             "last_name": "Admin",
@@ -33,7 +33,7 @@ def seed_users():
         },
         {
             "role": "UTLDO Admin",  # Using string value instead of enum
-            "faculty_id": "UTLDO001",
+            "staff_id": "UTLDO001",
             "first_name": "UTLDO",
             "middle_name": "",
             "last_name": "Admin",

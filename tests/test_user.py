@@ -24,7 +24,7 @@ class UserTestCase(TestCase):
         # Register a test user
         register_response = self.client.post("/auth/register", json={
             "role": "Technical Admin",
-            "faculty_id": "TEST123",
+            "staff_id": "TEST123",
             "first_name": "Test",
             "middle_name": "T.",
             "last_name": "User",
@@ -62,7 +62,7 @@ class UserTestCase(TestCase):
             response = self.client.post("/users/", 
                 json={
                     "role": "Faculty",
-                    "faculty_id": "FAC001",
+                    "staff_id": "FAC001",
                     "first_name": "John",
                     "last_name": "Doe",
                     "email": "john.doe@example.com",
@@ -82,7 +82,7 @@ class UserTestCase(TestCase):
         response = self.client.post("/users/", 
             json={
                 "role": "Faculty",
-                "faculty_id": "FAC001",
+                "staff_id": "FAC001",
                 "first_name": "Jane",
                 "last_name": "Doe",
                 "email": "jane.doe@example.com",
@@ -100,7 +100,7 @@ class UserTestCase(TestCase):
             auth_header = {"Authorization": self._register_and_login()}
             response = self.client.post("/users/", 
                 json={
-                    "faculty_id": "FAC003",
+                    "staff_id": "FAC003",
                     "first_name": "Incomplete",
                     "last_name": "User"
                 },
@@ -118,7 +118,7 @@ class UserTestCase(TestCase):
             self.client.post("/users/", 
                 json={
                     "role": "Faculty",
-                    "faculty_id": "FAC001",
+                    "staff_id": "FAC001",
                     "first_name": "Original",
                     "last_name": "User",
                     "email": "duplicate@example.com",
@@ -135,7 +135,7 @@ class UserTestCase(TestCase):
             response = self.client.post("/users/", 
                 json={
                     "role": "Evaluator",
-                    "faculty_id": "EVAL005",
+                    "staff_id": "EVAL005",
                     "first_name": "Duplicate",
                     "last_name": "User",
                     "email": "duplicate@example.com",
@@ -151,14 +151,14 @@ class UserTestCase(TestCase):
         except ValueError as e:
             self.fail(str(e))
     
-    def test_create_user_duplicate_faculty_id_fail(self):
+    def test_create_user_duplicate_staff_id_fail(self):
         try:
             auth_header = {"Authorization": self._register_and_login()}
             
             self.client.post("/users/", 
                 json={
                     "role": "Faculty",
-                    "faculty_id": "DUPLICATE001",
+                    "staff_id": "DUPLICATE001",
                     "first_name": "First",
                     "last_name": "User",
                     "email": "first@example.com",
@@ -174,7 +174,7 @@ class UserTestCase(TestCase):
             response = self.client.post("/users/", 
                 json={
                     "role": "Faculty",
-                    "faculty_id": "DUPLICATE001",
+                    "staff_id": "DUPLICATE001",
                     "first_name": "Second",
                     "last_name": "User",
                     "email": "second@example.com",
@@ -198,7 +198,7 @@ class UserTestCase(TestCase):
             self.client.post("/users/", 
                 json={
                     "role": "Faculty",
-                    "faculty_id": "UPDATE001",
+                    "staff_id": "UPDATE001",
                     "first_name": "Original",
                     "last_name": "Name",
                     "email": "update@example.com",
@@ -215,7 +215,7 @@ class UserTestCase(TestCase):
             response = self.client.put("/users/2", 
                 json={
                     "role": "Faculty",
-                    "faculty_id": "UPDATE001",
+                    "staff_id": "UPDATE001",
                     "first_name": "Updated",
                     "last_name": "Name",
                     "email": "update@example.com",
@@ -245,7 +245,7 @@ class UserTestCase(TestCase):
             self.client.post("/users/", 
                 json={
                     "role": "student",
-                    "faculty_id": "GET001",
+                    "staff_id": "GET001",
                     "first_name": "Get",
                     "last_name": "User",
                     "email": "get@example.com",
@@ -276,7 +276,7 @@ class UserTestCase(TestCase):
             self.client.post("/users/", 
                 json={
                     "role": "student",
-                    "faculty_id": "DELETE001",
+                    "staff_id": "DELETE001",
                     "first_name": "Delete",
                     "last_name": "Me",
                     "email": "delete@example.com",

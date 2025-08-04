@@ -16,7 +16,7 @@ class UserService:
         
         new_user = User(
             role=data['role'],
-            faculty_id=data['faculty_id'],
+            staff_id=data['staff_id'],
             first_name=data['first_name'],
             last_name=data['last_name'],
             email=data['email'],

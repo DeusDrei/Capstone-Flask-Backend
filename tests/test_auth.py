@@ -22,7 +22,7 @@ class AuthTestCase(TestCase):
     def test_register_successful(self):
         response = self.client.post("/auth/register", json={
             "role": "Faculty",
-            "faculty_id": "12345678",
+            "staff_id": "12345678",
             "first_name": "Good",
             "middle_name": "User",
             "last_name": "Name",
@@ -38,7 +38,7 @@ class AuthTestCase(TestCase):
     
     def test_register_incomplete_fail(self):
         response = self.client.post("/auth/register", json={
-            "faculty_id": "12345678",
+            "staff_id": "12345678",
             "password": "incompletepassword123"
         })
 
@@ -47,7 +47,7 @@ class AuthTestCase(TestCase):
     def test_register_email_already_exists_fail(self):
         self.client.post("/auth/register", json={
             "role": "Faculty",
-            "faculty_id": "11111111",
+            "staff_id": "11111111",
             "first_name": "Unique",
             "middle_name": "User",
             "last_name": "Test",
@@ -61,7 +61,7 @@ class AuthTestCase(TestCase):
 
         response = self.client.post("/auth/register", json={
             "role": "Faculty",
-            "faculty_id": "22222222",
+            "staff_id": "22222222",
             "first_name": "Another",
             "middle_name": "User",
             "last_name": "Test",
@@ -78,7 +78,7 @@ class AuthTestCase(TestCase):
     def test_login_successful(self):
         self.client.post("/auth/register", json={
             "role": "Faculty",
-            "faculty_id": "33333333",
+            "staff_id": "33333333",
             "first_name": "Good",
             "middle_name": "Login",
             "last_name": "User",
@@ -109,7 +109,7 @@ class AuthTestCase(TestCase):
     def test_login_bad_password_fail(self):
         self.client.post("/auth/register", json={
             "role": "Faculty",
-            "faculty_id": "44444444",
+            "staff_id": "44444444",
             "first_name": "Bad",
             "middle_name": "Password",
             "last_name": "User",

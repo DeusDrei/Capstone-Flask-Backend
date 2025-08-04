@@ -17,7 +17,7 @@ class AuthService:
         
         new_user = User(
             role=data['role'],
-            faculty_id=data['faculty_id'],
+            staff_id=data['staff_id'],
             first_name=data['first_name'],
             last_name=data['last_name'],
             email=data['email'],
@@ -51,7 +51,7 @@ class AuthService:
             additional_claims={
                 "role": identity.role,
                 "email": identity.email,
-                "faculty_id": identity.faculty_id,
+                "staff_id": identity.staff_id,
                 "first_name": identity.first_name,
                 "last_name": identity.last_name
             }            

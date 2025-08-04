@@ -6,7 +6,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     role = db.Column(db.String, nullable=False)
-    faculty_id = db.Column(db.String, unique=True, nullable=False)
+    staff_id = db.Column(db.String, unique=True, nullable=False)
     first_name = db.Column(db.String, nullable=False)
     middle_name = db.Column(db.String)
     last_name = db.Column(db.String, nullable=False)
@@ -20,10 +20,10 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
     is_deleted = db.Column(db.Boolean, default=False)
 
-    def __init__(self, role, faculty_id, first_name, last_name, email, password, phone_number, birth_date,
+    def __init__(self, role, staff_id, first_name, last_name, email, password, phone_number, birth_date,
                  created_by, updated_by, middle_name=None):
         self.role = role
-        self.faculty_id = faculty_id
+        self.staff_id = staff_id
         self.first_name = first_name
         self.last_name = last_name
         self.email = email

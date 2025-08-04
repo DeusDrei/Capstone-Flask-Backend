@@ -20,7 +20,7 @@ def create_user():
     except IntegrityError as e:
         if "users.email" in str(e.orig):
             return jsonify({"message": "User with this email already exists"}), 409
-        if "users.faculty_id" in str(e.orig):
+        if "users.staff_id" in str(e.orig):
             return jsonify({"message": "User with this faculty ID already exists"}), 409
         return jsonify({'error': 'Database integrity error'}), 500
     except Exception as e:
