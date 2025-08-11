@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from .config import Config
 from .extensions import db, migrate, api, ma, jwt
-from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint, universityim_blueprint, serviceim_blueprint
+from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint, universityim_blueprint, serviceim_blueprint, collegeincluded_blueprint
 
 from .seeds.users import register_commands as register_users
 from .seeds.departments import register_commands as register_departments
@@ -10,6 +10,7 @@ from .seeds.colleges import register_commands as register_colleges
 from .seeds.subjects import register_commands as register_subjects
 from .seeds.universityims import register_commands as register_universityims
 from .seeds.serviceims import register_commands as register_serviceims
+from .seeds.collegesincluded import register_commands as register_collegesincluded
 
 def create_app():
     app = Flask(__name__)
@@ -32,6 +33,7 @@ def create_app():
     register_subjects(app)
     register_universityims(app)
     register_serviceims(app)
+    register_collegesincluded(app)
     
     api.register_blueprint(auth_blueprint)
     api.register_blueprint(user_blueprint)
@@ -40,5 +42,6 @@ def create_app():
     api.register_blueprint(subject_blueprint)
     api.register_blueprint(universityim_blueprint)
     api.register_blueprint(serviceim_blueprint)
+    api.register_blueprint(collegeincluded_blueprint)
     
     return app

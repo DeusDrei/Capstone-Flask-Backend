@@ -4,3 +4,4 @@ from .colleges import College
 from .subjects import Subject
 from .universityims import UniversityIM
 from .serviceims import ServiceIM
+from .collegesincluded import CollegeIncluded
