@@ -39,9 +39,14 @@ class UniversityIMService:
         return new_universityim
 
     @staticmethod
-    def get_all_universityims():
-        """Get all University IM entries"""
-        return UniversityIM.query.all()
+    def get_all_universityims(page=1):
+        """Get all University IM entries with pagination"""
+        per_page = 10 
+        return UniversityIM.query.paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
     def get_universityim_by_id(universityim_id):
@@ -80,16 +85,31 @@ class UniversityIMService:
         return True
 
     @staticmethod
-    def get_universityims_by_college(college_id):
-        """Get all University IMs for a specific college"""
-        return UniversityIM.query.filter_by(college_id=college_id).all()
+    def get_universityims_by_college(college_id, page=1):
+        """Get all University IMs for a specific college with pagination"""
+        per_page = 10
+        return UniversityIM.query.filter_by(college_id=college_id).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
-    def get_universityims_by_department(department_id):
-        """Get all University IMs for a specific department"""
-        return UniversityIM.query.filter_by(department_id=department_id).all()
+    def get_universityims_by_department(department_id, page=1):
+        """Get all University IMs for a specific department with pagination"""
+        per_page = 10
+        return UniversityIM.query.filter_by(department_id=department_id).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
-    def get_universityims_by_subject(subject_id):
-        """Get all University IMs for a specific subject"""
-        return UniversityIM.query.filter_by(subject_id=subject_id).all()
+    def get_universityims_by_subject(subject_id, page=1):
+        """Get all University IMs for a specific subject with pagination"""
+        per_page = 10
+        return UniversityIM.query.filter_by(subject_id=subject_id).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )

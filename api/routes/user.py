@@ -3,12 +3,13 @@ from flask_smorest import Blueprint
 from api.services.user_service import UserService
 from api.schemas.users import UserSchema
 from sqlalchemy.exc import IntegrityError
-from api.middleware import jwt_required
+from api.middleware import jwt_required, roles_required
 
 user_blueprint = Blueprint('users', __name__, url_prefix="/users")
 
 @user_blueprint.route('/', methods=['POST'])
 @jwt_required
+@roles_required('Technical Admin')
 def create_user():
     try:
         data = UserSchema().load(request.json)
@@ -40,10 +41,19 @@ def get_user(user_id):
 
 @user_blueprint.route('/', methods=['GET'])
 @jwt_required
+@roles_required('Technical Admin')
 def get_all_users():
-    users = UserService.get_all_users()
+    page = request.args.get('page', 1, type=int)
+    paginated_users = UserService.get_all_users(page=page)
+    
     user_schema = UserSchema(many=True)
-    return jsonify(user_schema.dump(users)), 200
+    return jsonify({
+        'users': user_schema.dump(paginated_users.items),
+        'total': paginated_users.total,
+        'pages': paginated_users.pages,
+        'current_page': paginated_users.page,
+        'per_page': paginated_users.per_page
+    }), 200
 
 @user_blueprint.route('/<int:user_id>', methods=['PUT'])
 @jwt_required
@@ -63,6 +73,7 @@ def update_user(user_id):
 
 @user_blueprint.route('/<int:user_id>', methods=['DELETE'])
 @jwt_required
+@roles_required('Technical Admin')
 def delete_user(user_id):
     success = UserService.soft_delete_user(user_id)
     if not success:
@@ -72,13 +83,23 @@ def delete_user(user_id):
 
 @user_blueprint.route('/deleted', methods=['GET'])
 @jwt_required
+@roles_required('Technical Admin')
 def get_deleted_users():
-    users = UserService.get_deleted_users()
+    page = request.args.get('page', 1, type=int)
+    paginated_users = UserService.get_deleted_users(page=page)
+    
     user_schema = UserSchema(many=True)
-    return jsonify(user_schema.dump(users)), 200
+    return jsonify({
+        'users': user_schema.dump(paginated_users.items),
+        'total': paginated_users.total,
+        'pages': paginated_users.pages,
+        'current_page': paginated_users.page,
+        'per_page': paginated_users.per_page
+    }), 200
 
 @user_blueprint.route('/<int:user_id>/restore', methods=['POST'])
 @jwt_required
+@roles_required('Technical Admin')
 def restore_user(user_id):
     success = UserService.restore_user(user_id)
     if not success:

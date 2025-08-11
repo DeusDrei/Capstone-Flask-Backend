@@ -17,9 +17,14 @@ class SubjectService:
         return new_subject
 
     @staticmethod
-    def get_all_subjects():
-        """Get all active subjects"""
-        return Subject.query.filter_by(is_deleted=False).all()
+    def get_all_subjects(page=1):
+        """Get all active subjects with pagination"""
+        per_page = 10 
+        return Subject.query.filter_by(is_deleted=False).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
     def get_subject_by_id(subject_id):
@@ -61,9 +66,14 @@ class SubjectService:
         return True
 
     @staticmethod
-    def get_deleted_subjects():
-        """Get all soft-deleted subjects"""
-        return Subject.query.filter_by(is_deleted=True).all()
+    def get_deleted_subjects(page=1):
+        """Get all soft-deleted subjects with pagination"""
+        per_page = 10 
+        return Subject.query.filter_by(is_deleted=True).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
     def restore_subject(subject_id):

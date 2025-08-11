@@ -3,12 +3,13 @@ from flask_smorest import Blueprint
 from api.services.college_service import CollegeService
 from api.schemas.colleges import CollegeSchema
 from sqlalchemy.exc import IntegrityError
-from api.middleware import jwt_required
+from api.middleware import jwt_required, roles_required
 
 college_blueprint = Blueprint('colleges', __name__, url_prefix="/colleges")
 
 @college_blueprint.route('/', methods=['POST'])
 @jwt_required
+@roles_required('Technical Admin')
 def create_college():
     try:
         data = CollegeSchema().load(request.json)
@@ -41,12 +42,21 @@ def get_college(college_id):
 @college_blueprint.route('/', methods=['GET'])
 @jwt_required
 def get_all_colleges():
-    colleges = CollegeService.get_all_colleges()
+    page = request.args.get('page', 1, type=int)
+    paginated_colleges = CollegeService.get_all_colleges(page=page)
+    
     college_schema = CollegeSchema(many=True)
-    return jsonify(college_schema.dump(colleges)), 200
+    return jsonify({
+        'colleges': college_schema.dump(paginated_colleges.items),
+        'total': paginated_colleges.total,
+        'pages': paginated_colleges.pages,
+        'current_page': paginated_colleges.page,
+        'per_page': paginated_colleges.per_page
+    }), 200
 
 @college_blueprint.route('/<int:college_id>', methods=['PUT'])
 @jwt_required
+@roles_required('Technical Admin')
 def update_college(college_id):
     college_schema = CollegeSchema(partial=True)
 
@@ -63,6 +73,7 @@ def update_college(college_id):
 
 @college_blueprint.route('/<int:college_id>', methods=['DELETE'])
 @jwt_required
+@roles_required('Technical Admin')
 def delete_college(college_id):
     success = CollegeService.soft_delete_college(college_id)
     if not success:
@@ -72,13 +83,23 @@ def delete_college(college_id):
 
 @college_blueprint.route('/deleted', methods=['GET'])
 @jwt_required
+@roles_required('Technical Admin')
 def get_deleted_colleges():
-    colleges = CollegeService.get_deleted_colleges()
+    page = request.args.get('page', 1, type=int)
+    paginated_colleges = CollegeService.get_deleted_colleges(page=page)
+    
     college_schema = CollegeSchema(many=True)
-    return jsonify(college_schema.dump(colleges)), 200
+    return jsonify({
+        'colleges': college_schema.dump(paginated_colleges.items),
+        'total': paginated_colleges.total,
+        'pages': paginated_colleges.pages,
+        'current_page': paginated_colleges.page,
+        'per_page': paginated_colleges.per_page
+    }), 200
 
 @college_blueprint.route('/<int:college_id>/restore', methods=['POST'])
 @jwt_required
+@roles_required('Technical Admin')
 def restore_college(college_id):
     success = CollegeService.restore_college(college_id)
     if not success:

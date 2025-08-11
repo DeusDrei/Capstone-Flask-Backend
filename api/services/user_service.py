@@ -33,9 +33,15 @@ class UserService:
         return new_user
 
     @staticmethod
-    def get_all_users():
-        """Get all active users"""
-        return User.query.filter_by(is_deleted=False).all()
+    def get_all_users(page=1):
+        """Get all active users with pagination"""
+        per_page = 10 
+        return User.query.filter_by(is_deleted=False).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
+
 
     @staticmethod
     def get_user_by_id(user_id):
@@ -90,9 +96,14 @@ class UserService:
         return True
 
     @staticmethod
-    def get_deleted_users():
-        """Get all soft-deleted users"""
-        return User.query.filter_by(is_deleted=True).all()
+    def get_deleted_users(page=1):
+        """Get all soft-deleted users with pagination"""
+        per_page = 10
+        return User.query.filter_by(is_deleted=True).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
     def restore_user(user_id):

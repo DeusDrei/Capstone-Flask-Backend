@@ -28,9 +28,14 @@ class ServiceIMService:
         return serviceim
 
     @staticmethod
-    def get_all_serviceims():
-        """Get all Service IMs"""
-        return ServiceIM.query.all()
+    def get_all_serviceims(page=1):
+        """Get all Service IMs with pagination"""
+        per_page = 10
+        return ServiceIM.query.paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
     def get_serviceim_by_id(serviceim_id):
@@ -77,11 +82,21 @@ class ServiceIMService:
         return True
 
     @staticmethod
-    def get_serviceims_by_college(college_id):
-        """Get all Service IMs for a specific college"""
-        return ServiceIM.query.filter_by(college_id=college_id).all()
+    def get_serviceims_by_college(college_id, page=1):
+        """Get Service IMs for a specific college with pagination"""
+        per_page = 10
+        return ServiceIM.query.filter_by(college_id=college_id).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
-    def get_serviceims_by_subject(subject_id):
-        """Get all Service IMs for a specific subject"""
-        return ServiceIM.query.filter_by(subject_id=subject_id).all()
+    def get_serviceims_by_subject(subject_id, page=1):
+        """Get Service IMs for a specific subject with pagination"""
+        per_page = 10
+        return ServiceIM.query.filter_by(subject_id=subject_id).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )

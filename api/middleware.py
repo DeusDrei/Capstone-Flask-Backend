@@ -3,6 +3,42 @@ from api.services.auth_service import AuthService
 from datetime import datetime, UTC
 from marshmallow import ValidationError
 from api.config import Config
+from functools import wraps
+
+def roles_required(*required_roles):
+    """
+    Decorator to check if the user has any of the required roles.
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            token = request.headers.get('Authorization')
+            
+            if not token:
+                return jsonify({'error': 'Token is missing'}), 401
+
+            try:
+                token = token.split(" ")[1]
+                payload = AuthService.decode_access_token(token)
+                
+                if payload is None:
+                    return jsonify({'error': 'Invalid or expired token'}), 401
+                
+                # Get the role from additional claims
+                user_role = payload.get('role')
+                
+                if user_role not in required_roles:
+                    return jsonify({'error': 'Insufficient permissions'}), 403
+                
+                request.user_identity = payload['sub']
+                request.user_role = payload.get('role')
+                return f(*args, **kwargs)
+            
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        return wrapper
+    return decorator
 
 def jwt_required(f):
     """

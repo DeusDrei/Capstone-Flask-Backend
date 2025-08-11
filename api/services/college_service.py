@@ -17,9 +17,15 @@ class CollegeService:
         return new_college
 
     @staticmethod
-    def get_all_colleges():
-        """Get all active colleges"""
-        return College.query.filter_by(is_deleted=False).all()
+    def get_all_colleges(page=1):
+        """Get all active colleges with pagination"""
+        per_page = 10
+        return College.query.filter_by(is_deleted=False).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
+
 
     @staticmethod
     def get_college_by_id(college_id):
@@ -62,9 +68,14 @@ class CollegeService:
         return True
 
     @staticmethod
-    def get_deleted_colleges():
-        """Get all soft-deleted colleges"""
-        return College.query.filter_by(is_deleted=True).all()
+    def get_deleted_colleges(page=1):
+        """Get all deleted colleges with pagination"""
+        per_page = 10
+        return College.query.filter_by(is_deleted=True).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
 
     @staticmethod
     def restore_college(college_id):

@@ -42,9 +42,20 @@ def get_serviceim(serviceim_id):
 @serviceim_blueprint.route('/', methods=['GET'])
 @jwt_required
 def get_all_serviceims():
-    serviceims = ServiceIMService.get_all_serviceims()
+    page = request.args.get('page', 1, type=int)
+    if page < 1:
+        return jsonify({'error': 'Page number must be positive'}), 400
+    
+    paginated_serviceims = ServiceIMService.get_all_serviceims(page=page)
+    
     serviceim_schema = ServiceIMSchema(many=True)
-    return jsonify(serviceim_schema.dump(serviceims)), 200
+    return jsonify({
+        'serviceims': serviceim_schema.dump(paginated_serviceims.items),
+        'total': paginated_serviceims.total,
+        'pages': paginated_serviceims.pages,
+        'current_page': paginated_serviceims.page,
+        'per_page': paginated_serviceims.per_page
+    }), 200
 
 @serviceim_blueprint.route('/<int:serviceim_id>', methods=['PUT'])
 @jwt_required
@@ -78,3 +89,39 @@ def delete_serviceim(serviceim_id):
         return jsonify({'error': str(e)}), 500
 
     return jsonify({'message': 'Service IM deleted successfully'}), 200
+
+@serviceim_blueprint.route('/college/<int:college_id>', methods=['GET'])
+@jwt_required
+def get_serviceims_by_college(college_id):
+    page = request.args.get('page', 1, type=int)
+    if page < 1:
+        return jsonify({'error': 'Page number must be positive'}), 400
+    
+    paginated_serviceims = ServiceIMService.get_serviceims_by_college(college_id, page=page)
+    
+    serviceim_schema = ServiceIMSchema(many=True)
+    return jsonify({
+        'serviceims': serviceim_schema.dump(paginated_serviceims.items),
+        'total': paginated_serviceims.total,
+        'pages': paginated_serviceims.pages,
+        'current_page': paginated_serviceims.page,
+        'per_page': paginated_serviceims.per_page
+    }), 200
+
+@serviceim_blueprint.route('/subject/<int:subject_id>', methods=['GET'])
+@jwt_required
+def get_serviceims_by_subject(subject_id):
+    page = request.args.get('page', 1, type=int)
+    if page < 1:
+        return jsonify({'error': 'Page number must be positive'}), 400
+    
+    paginated_serviceims = ServiceIMService.get_serviceims_by_subject(subject_id, page=page)
+    
+    serviceim_schema = ServiceIMSchema(many=True)
+    return jsonify({
+        'serviceims': serviceim_schema.dump(paginated_serviceims.items),
+        'total': paginated_serviceims.total,
+        'pages': paginated_serviceims.pages,
+        'current_page': paginated_serviceims.page,
+        'per_page': paginated_serviceims.per_page
+    }), 200
