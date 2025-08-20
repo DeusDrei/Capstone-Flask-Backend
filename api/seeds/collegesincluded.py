@@ -14,22 +14,33 @@ def seed_collegesincluded():
         click.echo("⚠️  CollegeIncluded records already exist in database. Skipping seeding.")
         return
     
-    # Get one admin user and multiple colleges
-    user = User.query.filter(User.role.in_(['Technical Admin'])).first()
-    colleges = College.query.limit(5).all() 
+    # Get multiple users (from all roles) and multiple colleges
+    users = User.query.all()
+    colleges = College.query.all()
     
-    if not user or not colleges:
+    if not users or not colleges:
         click.echo("❌ Required seed data missing. Please seed users and colleges first.")
         return
 
     current_time = datetime.now(UTC)
-    
-    college_included = [
-        {
-            "college_id": college.id,
-            "user_id": user.id
-        } for college in colleges  # Create association for each college
-    ]
+
+    college_included = []
+    for user in users:
+        if user.role in ["Technical Admin", "UTLDO Admin"]:
+            # Admins: all colleges
+            for college in colleges:
+                college_included.append({
+                    "college_id": college.id,
+                    "user_id": user.id
+                })
+        else:
+            # Faculty/Evaluator: only 2 colleges, rotating
+            for i in range(2):
+                college = colleges[(user.id + i) % len(colleges)]
+                college_included.append({
+                    "college_id": college.id,
+                    "user_id": user.id
+                })
 
     try:
         for ci_data in college_included:

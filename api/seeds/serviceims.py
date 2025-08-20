@@ -15,38 +15,25 @@ def seed_serviceims():
         return
     
     # Ensure required foreign key data exists
-    college = College.query.filter_by(abbreviation="CCIS").first()
-    subjects = Subject.query.limit(5).all()
+    colleges = College.query.all()
+    subjects = Subject.query.all()
     
-    if not college or not subjects:
+    if not colleges or not subjects:
         click.echo("❌ Required seed data missing. Please seed colleges and subjects first.")
         return
 
     current_time = datetime.now(UTC)
     admin_user = "system"
-    
-    service_ims = [
-        {
-            "college_id": college.id,
-            "subject_id": subjects[0].id
-        },
-        {
-            "college_id": college.id,
-            "subject_id": subjects[1].id
-        },
-        {
-            "college_id": college.id,
-            "subject_id": subjects[2].id
-        },
-        {
-            "college_id": college.id,
-            "subject_id": subjects[3].id
-        },
-        {
-            "college_id": college.id,
-            "subject_id": subjects[4].id
-        }
-    ]
+
+    # Assign 2-3 unique subjects to each college for ServiceIMs
+    service_ims = []
+    for i, college in enumerate(colleges):
+        for j in range(2):
+            subj_idx = (i * 2 + j) % len(subjects)
+            service_ims.append({
+                "college_id": college.id,
+                "subject_id": subjects[subj_idx].id
+            })
 
     try:
         for im_data in service_ims:

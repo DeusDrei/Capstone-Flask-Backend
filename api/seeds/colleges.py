@@ -17,46 +17,20 @@ def seed_colleges():
     admin_user = "system"  # Assuming this matches your user seeding
     
     colleges = [
-        {
-            "abbreviation": "CE",
-            "name": "College of Engineering",
-            "created_by": admin_user,
-            "updated_by": admin_user,
-            "created_at": current_time,
-            "updated_at": current_time
-        },
-        {
-            "abbreviation": "COC",
-            "name": "College of Communication",
-            "created_by": admin_user,
-            "updated_by": admin_user,
-            "created_at": current_time,
-            "updated_at": current_time
-        },
-        {
-            "abbreviation": "CCIS",
-            "name": "College of Computer and Information Sciences",
-            "created_by": admin_user,
-            "updated_by": admin_user,
-            "created_at": current_time,
-            "updated_at": current_time
-        },
-        {
-            "abbreviation": "CAF",
-            "name": "College of Accountancy and Finance",
-            "created_by": admin_user,
-            "updated_by": admin_user,
-            "created_at": current_time,
-            "updated_at": current_time
-        },
-        {
-            "abbreviation": "CBA",
-            "name": "College of Business Administration",
-            "created_by": admin_user,
-            "updated_by": admin_user,
-            "created_at": current_time,
-            "updated_at": current_time
-        }
+        {"abbreviation": "CAF", "name": "College of Accountancy and Finance", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CADBE", "name": "College of Architecture, Design and the Built Environment", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CAL", "name": "College of Arts and Letters", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CBA", "name": "College of Business Administration", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "COC", "name": "College of Communication", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CCIS", "name": "College of Computer and Information Sciences", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "COED", "name": "College of Education", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CE", "name": "College of Engineering", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CHK", "name": "College of Human Kinetics", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CL", "name": "College of Law", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CPSPA", "name": "College of Political Science and Public Administration", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CSSD", "name": "College of Social Sciences and Development", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CS", "name": "College of Science", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time},
+        {"abbreviation": "CTHTM", "name": "College of Tourism, Hospitality and Transportation Management", "created_by": admin_user, "updated_by": admin_user, "created_at": current_time, "updated_at": current_time}
     ]
 
     try:

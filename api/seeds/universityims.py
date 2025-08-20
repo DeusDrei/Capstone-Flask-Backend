@@ -15,46 +15,25 @@ def seed_universityims():
         return
     
     # Ensure required foreign key data exists
-    college = College.query.filter_by(abbreviation="CCIS").first()
-    dept = Department.query.filter_by(abbreviation="BSIT").first()
-    subjects = Subject.query.limit(5).all()
-    
-    if not college or not dept or not subjects:
+    colleges = College.query.all()
+    departments = Department.query.all()
+    subjects = Subject.query.all()
+
+    if not colleges or not departments or not subjects:
         click.echo("❌ Required seed data missing. Please seed colleges, departments, and subjects first.")
         return
-    
-    university_ims = [
-        {
-            "college_id": college.id,
-            "department_id": dept.id,
-            "subject_id": subjects[0].id,
-            "year_level": 1
-        },
-        {
-            "college_id": college.id,
-            "department_id": dept.id,
-            "subject_id": subjects[1].id,
-            "year_level": 1
-        },
-        {
-            "college_id": college.id,
-            "department_id": dept.id,
-            "subject_id": subjects[2].id,
-            "year_level": 2
-        },
-        {
-            "college_id": college.id,
-            "department_id": dept.id,
-            "subject_id": subjects[3].id,
-            "year_level": 2
-        },
-        {
-            "college_id": college.id,
-            "department_id": dept.id,
-            "subject_id": subjects[4].id,
-            "year_level": 3
-        }
-    ]
+
+    university_ims = []
+    for i, college in enumerate(colleges):
+        for j, dept in enumerate(departments):
+            for year in range(1, 3):
+                subj_idx = (i * 2 + j + year) % len(subjects)
+                university_ims.append({
+                    "college_id": college.id,
+                    "department_id": dept.id,
+                    "subject_id": subjects[subj_idx].id,
+                    "year_level": year
+                })
 
     try:
         for im_data in university_ims:

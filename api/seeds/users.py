@@ -18,8 +18,9 @@ def seed_users():
     password_hash = generate_password_hash("Admin@1234")
     
     users = [
+        # Technical Admins
         {
-            "role": "Technical Admin", 
+            "role": "Technical Admin",
             "staff_id": "ADMIN001",
             "first_name": "System",
             "middle_name": "",
@@ -32,7 +33,21 @@ def seed_users():
             "updated_by": "system"
         },
         {
-            "role": "UTLDO Admin",  # Using string value instead of enum
+            "role": "Technical Admin",
+            "staff_id": "ADMIN002",
+            "first_name": "Alice",
+            "middle_name": "Marie",
+            "last_name": "Smith",
+            "email": "alice.smith@example.com",
+            "password": password_hash,
+            "phone_number": "+1234567892",
+            "birth_date": datetime.strptime("1985-05-10", "%Y-%m-%d").date(),
+            "created_by": "system",
+            "updated_by": "system"
+        },
+        # UTLDO Admins
+        {
+            "role": "UTLDO Admin",
             "staff_id": "UTLDO001",
             "first_name": "UTLDO",
             "middle_name": "",
@@ -41,6 +56,73 @@ def seed_users():
             "password": password_hash,
             "phone_number": "+1234567891",
             "birth_date": datetime.strptime("1990-01-01", "%Y-%m-%d").date(),
+            "created_by": "system",
+            "updated_by": "system"
+        },
+        {
+            "role": "UTLDO Admin",
+            "staff_id": "UTLDO002",
+            "first_name": "Bob",
+            "middle_name": "Lee",
+            "last_name": "Johnson",
+            "email": "bob.johnson@example.com",
+            "password": password_hash,
+            "phone_number": "+1234567893",
+            "birth_date": datetime.strptime("1988-03-15", "%Y-%m-%d").date(),
+            "created_by": "system",
+            "updated_by": "system"
+        },
+        # Faculty
+        {
+            "role": "Faculty",
+            "staff_id": "FAC001",
+            "first_name": "Carol",
+            "middle_name": "Ann",
+            "last_name": "Davis",
+            "email": "carol.davis@example.com",
+            "password": password_hash,
+            "phone_number": "+1234567894",
+            "birth_date": datetime.strptime("1992-07-20", "%Y-%m-%d").date(),
+            "created_by": "system",
+            "updated_by": "system"
+        },
+        {
+            "role": "Faculty",
+            "staff_id": "FAC002",
+            "first_name": "David",
+            "middle_name": "Paul",
+            "last_name": "Miller",
+            "email": "david.miller@example.com",
+            "password": password_hash,
+            "phone_number": "+1234567895",
+            "birth_date": datetime.strptime("1991-11-30", "%Y-%m-%d").date(),
+            "created_by": "system",
+            "updated_by": "system"
+        },
+        # Evaluators
+        {
+            "role": "Evaluator",
+            "staff_id": "EVAL001",
+            "first_name": "Eve",
+            "middle_name": "Grace",
+            "last_name": "Wilson",
+            "email": "eve.wilson@example.com",
+            "password": password_hash,
+            "phone_number": "+1234567896",
+            "birth_date": datetime.strptime("1989-09-25", "%Y-%m-%d").date(),
+            "created_by": "system",
+            "updated_by": "system"
+        },
+        {
+            "role": "Evaluator",
+            "staff_id": "EVAL002",
+            "first_name": "Frank",
+            "middle_name": "Henry",
+            "last_name": "Moore",
+            "email": "frank.moore@example.com",
+            "password": password_hash,
+            "phone_number": "+1234567897",
+            "birth_date": datetime.strptime("1993-12-12", "%Y-%m-%d").date(),
             "created_by": "system",
             "updated_by": "system"
         }
