@@ -41,17 +41,25 @@ def get_department(department_id):
 
 @department_blueprint.route('/', methods=['GET'])
 @jwt_required
+
 def get_all_departments():
-    page = request.args.get('page', 1, type=int)
-    paginated_departments = DepartmentService.get_all_departments(page=page)
-    department_schema = DepartmentSchema(many=True)
-    return jsonify({
-        'departments': department_schema.dump(paginated_departments.items),
-        'total': paginated_departments.total,
-        'pages': paginated_departments.pages,
-        'current_page': paginated_departments.page,
-        'per_page': paginated_departments.per_page
-    }), 200
+    try:
+        departments = DepartmentService.get_all_departments()
+        department_schema = DepartmentSchema(many=True)
+        return jsonify(department_schema.dump(departments)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@department_blueprint.route('/college/<int:college_id>', methods=['GET'])
+@jwt_required
+
+def get_departments_by_college_id(college_id):
+    try:
+        departments = DepartmentService.get_departments_by_college_id(college_id)
+        department_schema = DepartmentSchema(many=True)
+        return jsonify(department_schema.dump(departments)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @department_blueprint.route('/<int:department_id>', methods=['PUT'])
 @jwt_required
