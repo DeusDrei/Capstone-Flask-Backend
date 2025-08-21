@@ -7,6 +7,7 @@ class DepartmentService:
         """Create a new department"""
         new_department = Department(
             abbreviation=data['abbreviation'],
+            college_id=data['college_id'],
             name=data['name'],
             created_by=data['created_by'],
             updated_by=data['updated_by']

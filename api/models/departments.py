@@ -5,6 +5,7 @@ class Department(db.Model):
     __tablename__ = 'departments'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    college_id = db.Column(db.Integer, db.ForeignKey('colleges.id'), nullable=False)
     abbreviation = db.Column(db.String, nullable=False, unique=True)
     name = db.Column(db.String, nullable=False, unique=True)
     created_by = db.Column(db.String, nullable=False)
@@ -13,7 +14,10 @@ class Department(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
     is_deleted = db.Column(db.Boolean, default=False)
 
-    def __init__(self, abbreviation, name, created_by, updated_by):
+    college = db.relationship('College', backref='included_departments')
+
+    def __init__(self, college_id, abbreviation, name, created_by, updated_by):
+        self.college_id = college_id
         self.abbreviation = abbreviation
         self.name = name
         self.updated_by = updated_by
