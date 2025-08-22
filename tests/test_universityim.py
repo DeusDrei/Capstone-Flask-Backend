@@ -39,6 +39,7 @@ class UniversityIMTestCase(TestCase):
         # Create test department
         test_dept = Department(
             abbreviation="TESTDEPT",
+            college_id=1,
             name="Test Department",
             created_by="system",
             updated_by="system"
