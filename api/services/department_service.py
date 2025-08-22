@@ -18,15 +18,15 @@ class DepartmentService:
         return new_department
 
     @staticmethod
-    def get_all_departments(page=1):
-        """Get all active departments with pagination"""
-        per_page = 10 
-        return Department.query.filter_by(is_deleted=False).paginate(
-            page=page, 
-            per_page=per_page, 
-            error_out=False
-        )
+    def get_all_departments():
+        """Get all active departments (no pagination)"""
+        return Department.query.filter_by(is_deleted=False).all()
 
+    @staticmethod
+    def get_departments_by_college_id(college_id):
+        """Get all active departments for a given college_id (no pagination)"""
+        return Department.query.filter_by(college_id=college_id, is_deleted=False).all()
+    
     @staticmethod
     def get_department_by_id(department_id):
         """Get department by ID (including soft-deleted ones)"""
