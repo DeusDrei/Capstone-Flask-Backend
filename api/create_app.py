@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from .config import Config
 from .extensions import db, migrate, api, ma, jwt
-from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint, universityim_blueprint, serviceim_blueprint, collegeincluded_blueprint
+from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint, universityim_blueprint, serviceim_blueprint, collegeincluded_blueprint, im_blueprint
 
 from .seeds.users import register_commands as register_users
 from .seeds.departments import register_commands as register_departments
@@ -20,6 +20,7 @@ def create_app():
     # Or enable CORS for specific domains only (recommended for production)
     # CORS(app, resources={r"/*": {"origins": ["https://flutter-frontend.example.com", "https://angular-frontend.example.com"]}})
     app.config.from_object(Config)
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -43,5 +44,6 @@ def create_app():
     api.register_blueprint(universityim_blueprint)
     api.register_blueprint(serviceim_blueprint)
     api.register_blueprint(collegeincluded_blueprint)
-    
+    api.register_blueprint(im_blueprint)
+
     return app
