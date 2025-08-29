@@ -7,3 +7,4 @@ from .universityim import *
 from .serviceim import *
 from .collegeincluded import *
 from .instructionalmaterial import *
+from .author import *

@@ -5,9 +5,8 @@ import re
 from dotenv import load_dotenv
 from api.extensions import db
 from api.models.instructionalmaterials import InstructionalMaterial
-import requests
-from urllib.parse import urlparse
 import tempfile
+import uuid
 
 load_dotenv()
 
@@ -15,7 +14,7 @@ class InstructionalMaterialService:
     @staticmethod
     def upload_pdf_to_s3(file_path, filename):
         """
-        Uploads PDF to S3 with the given filename
+        Uploads PDF to S3 and returns the object key
         """
         try:
             bucket_name = os.getenv('AWS_BUCKET_NAME')
@@ -28,10 +27,14 @@ class InstructionalMaterialService:
             if not file_path.lower().endswith('.pdf'):
                 raise ValueError("File must be a PDF")
             
-            s3 = boto3.client('s3')
-            s3.upload_file(file_path, bucket_name, filename)
+            unique_folder = str(uuid.uuid4())
             
-            return f"https://{bucket_name}.s3.amazonaws.com/{filename}"
+            s3_key = f"instructional_materials/{unique_folder}/{filename}"
+            
+            s3 = boto3.client('s3')
+            s3.upload_file(file_path, bucket_name, s3_key)
+            
+            return s3_key
             
         except Exception as e:
             raise Exception(f"S3 upload error: {str(e)}")
@@ -40,45 +43,49 @@ class InstructionalMaterialService:
     def process_pdf_file(pdf_file):
         """
         Process PDF file: save temporarily, analyze, and upload to S3
-        Returns: (s3_link, notes, temp_file_path)
+        Returns: (object_key, notes, temp_file_path)
         """
         try:
             if not pdf_file or pdf_file.filename == '' or not pdf_file.filename.lower().endswith('.pdf'):
                 raise ValueError("Valid PDF file is required")
             
-            # Save file to temporary location
             temp_dir = tempfile.gettempdir()
             file_path = os.path.join(temp_dir, pdf_file.filename)
             pdf_file.save(file_path)
             
-            # Process the PDF for missing sections
             notes = InstructionalMaterialService.check_missing_sections(file_path)
             
-            # Upload PDF to S3 using the original filename
-            s3_link = InstructionalMaterialService.upload_pdf_to_s3(file_path, pdf_file.filename)
+            object_key = InstructionalMaterialService.upload_pdf_to_s3(file_path, pdf_file.filename)
             
-            return s3_link, notes, file_path
+            return object_key, notes, file_path
             
         except Exception as e:
             raise Exception(f"PDF processing error: {str(e)}")
 
     @staticmethod
-    def delete_pdf_from_s3(s3_url):
+    def delete_pdf_from_s3(object_key):
         """
-        Deletes PDF from S3
+        Deletes PDF from S3 using object key
         """
         try:
-            url_without_protocol = s3_url.replace('https://', '')
-            parts = url_without_protocol.split('/')
-            bucket_name = parts[0].split('.')[0]
-            file_key = '/'.join(parts[1:])
+            bucket_name = os.getenv('AWS_BUCKET_NAME')
+            if not bucket_name:
+                raise ValueError("AWS_BUCKET_NAME not found in environment variables")
             
             s3 = boto3.client('s3')
-            s3.delete_object(Bucket=bucket_name, Key=file_key)
+            s3.delete_object(Bucket=bucket_name, Key=object_key)
             return True
             
         except Exception as e:
             raise Exception(f"S3 delete error: {str(e)}")
+
+    @staticmethod
+    def get_s3_url(object_key):
+        """Get full S3 URL from object key"""
+        bucket_name = os.getenv('AWS_BUCKET_NAME')
+        if not bucket_name:
+            raise ValueError("AWS_BUCKET_NAME not found in environment variables")
+        return f"https://{bucket_name}.s3.amazonaws.com/{object_key}"
 
     @staticmethod
     def check_missing_sections(pdf_path):
@@ -128,14 +135,14 @@ class InstructionalMaterialService:
             return f"Error processing PDF: {str(e)}"
 
     @staticmethod
-    def create_instructional_material(data, s3_link, notes):
+    def create_instructional_material(data, object_key, notes):
         """Create a new instructional material with pre-processed PDF data"""
         new_im = InstructionalMaterial(
             im_type=data['im_type'],
             status=data['status'],
             validity=data['validity'],
             version=data['version'],
-            s3_link=s3_link,
+            s3_link=object_key,
             created_by=data['created_by'],
             updated_by=data['updated_by'],
             notes=notes,
@@ -166,25 +173,21 @@ class InstructionalMaterialService:
     def update_instructional_material(im_id, data):
         """Update instructional material data with optional PDF replacement"""
         im = InstructionalMaterial.query.filter_by(id=im_id, is_deleted=False).first()
-        s3_link = data.get('s3_link')
+        object_key = data.get('s3_link')
         notes = data.get('notes')
         if not im:
             return None
         
         try:
-            # Handle PDF replacement if new file is provided
-            if s3_link:
-                # Delete old PDF from S3
-                if im.s3_link and im.s3_link != s3_link:
+            if object_key:
+                if im.s3_link and im.s3_link != object_key:
                     InstructionalMaterialService.delete_pdf_from_s3(im.s3_link)
 
-                im.s3_link = s3_link
+                im.s3_link = object_key
 
-            # Update notes if provided
             if notes is not None:
                 im.notes = notes
 
-            # Update other fields
             for key, value in data.items():
                 if hasattr(im, key) and key not in ['s3_link', 'notes']:
                     setattr(im, key, value)
@@ -202,14 +205,6 @@ class InstructionalMaterialService:
         im = InstructionalMaterial.query.filter_by(id=im_id, is_deleted=False).first()
         if not im:
             return False
-        
-        # Delete the PDF from S3 when soft-deleting the record
-        if im.s3_link:
-            try:
-                InstructionalMaterialService.delete_pdf_from_s3(im.s3_link)
-            except Exception as e:
-                # Log the error but don't fail the deletion
-                print(f"Warning: Failed to delete S3 file during soft delete: {str(e)}")
         
         im.is_deleted = True
         db.session.commit()
@@ -237,34 +232,30 @@ class InstructionalMaterialService:
         return True
 
     @staticmethod
-    def download_pdf(s3_url, download_path=None):
+    def download_pdf(object_key, download_path=None):
         """
-        Download PDF from S3 to specified path or user's Downloads folder
+        Download PDF from S3 using object key
         """
         try:       
-            if not s3_url:
-                raise ValueError("S3 URL is required")
+            if not object_key:
+                raise ValueError("Object key is required")
             
-            # Get filename from S3 URL
-            filename = os.path.basename(urlparse(s3_url).path)
+            bucket_name = os.getenv('AWS_BUCKET_NAME')
+            if not bucket_name:
+                raise ValueError("AWS_BUCKET_NAME not found in environment variables")
             
-            # Set default download path to user's Downloads folder
+            filename = os.path.basename(object_key)
+            
             if not download_path:
                 download_path = os.path.join(os.path.expanduser('~'), 'Downloads', filename)
             else:
-                # If download_path is a directory, append filename
                 if os.path.isdir(download_path):
                     download_path = os.path.join(download_path, filename)
             
-            # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(download_path), exist_ok=True)
             
-            # Download the file
-            with requests.get(s3_url, timeout=30, stream=True) as response:
-                response.raise_for_status()
-                with open(download_path, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
+            s3 = boto3.client('s3')
+            s3.download_file(bucket_name, object_key, download_path)
             
             return download_path
             
