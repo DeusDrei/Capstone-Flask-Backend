@@ -13,30 +13,26 @@ im_blueprint = Blueprint('instructionalmaterials', __name__, url_prefix="/instru
 def upload_pdf():
     """
     Separate endpoint for PDF upload and processing
-    Returns S3 link and analysis notes
+    Returns object key and analysis notes
     """
     try:
-        # Check if PDF file is provided
         if 'pdf_file' not in request.files:
             return jsonify({'error': 'PDF file is required'}), 400
         
         pdf_file = request.files['pdf_file']
         
-        # Process the PDF file (upload to S3 and analyze)
-        s3_link, notes, temp_file_path = InstructionalMaterialService.process_pdf_file(pdf_file)
+        object_key, notes, temp_file_path = InstructionalMaterialService.process_pdf_file(pdf_file)
         
-        # Clean up temporary file
         if temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         
         return jsonify({
-            's3_link': s3_link,
+            's3_link': object_key,
             'notes': notes,
             'filename': pdf_file.filename
         }), 200
         
     except Exception as e:
-        # Clean up temporary file if it exists
         if 'temp_file_path' in locals() and temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         return jsonify({'error': str(e)}), 400
@@ -46,21 +42,18 @@ def upload_pdf():
 def create_instructional_material():
     """
     Create instructional material using pre-uploaded PDF data
-    Expects s3_link and notes in the request body
+    Expects object_key and notes in the request body
     """
     try:
-        # Validate the data
         data = InstructionalMaterialSchema().load(request.json)
         
-        # Check if required PDF data is provided
-        if 's3_link' not in request.json:
-            return jsonify({'error': 's3_link is required'}), 400
+        if 'object_key' not in request.json:
+            return jsonify({'error': 'object_key is required'}), 400
         
-        s3_link = request.json['s3_link']
+        object_key = request.json['object_key']
         notes = request.json.get('notes', '')
         
-        # Create the instructional material
-        im = InstructionalMaterialService.create_instructional_material(data, s3_link, notes)
+        im = InstructionalMaterialService.create_instructional_material(data, object_key, notes)
         
         return jsonify({
             'message': f'Instructional Material {im.version} created successfully',
@@ -83,24 +76,23 @@ def update_instructional_material(im_id):
             # Handle PDF file upload and processing
             pdf_file = request.files['pdf_file']
             if pdf_file.filename != '' and pdf_file.filename.lower().endswith('.pdf'):
-                s3_link, notes, temp_file_path = InstructionalMaterialService.process_pdf_file(pdf_file)
+                object_key, notes, temp_file_path = InstructionalMaterialService.process_pdf_file(pdf_file)
                 
                 # Get other form data
                 form_data = request.form.to_dict()
                 validated_data = InstructionalMaterialSchema(partial=True).load(form_data)
                 
-                # Update with new PDF data
-                im = InstructionalMaterialService.update_instructional_material(
-                    im_id, validated_data, s3_link, notes
-                )
+                validated_data['s3_link'] = object_key
+                if notes:
+                    validated_data['notes'] = notes
                 
-                # Clean up temporary file
+                im = InstructionalMaterialService.update_instructional_material(im_id, validated_data)
+                
                 if temp_file_path and os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
             else:
                 return jsonify({'error': 'Valid PDF file is required'}), 400
         else:
-            # Handle JSON-only update
             data = InstructionalMaterialSchema(partial=True).load(request.json)
             im = InstructionalMaterialService.update_instructional_material(im_id, data)
         
@@ -113,7 +105,6 @@ def update_instructional_material(im_id):
         }), 200
         
     except Exception as e:
-        # Clean up temporary file if it exists
         if 'temp_file_path' in locals() and temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         return jsonify({'error': str(e)}), 400
@@ -125,8 +116,8 @@ def get_instructional_material(im_id):
     if not im or im.is_deleted:
         return jsonify({'error': 'Instructional Material not found'}), 404
 
-    im_schema = InstructionalMaterialSchema()
-    return jsonify(im_schema.dump(im)), 200
+    im_data = InstructionalMaterialSchema().dump(im)
+    return jsonify(im_data), 200
 
 @im_blueprint.route('/', methods=['GET'])
 @jwt_required
@@ -134,9 +125,10 @@ def get_all_instructional_materials():
     page = request.args.get('page', 1, type=int)
     paginated_ims = InstructionalMaterialService.get_all_instructional_materials(page=page)
     
-    im_schema = InstructionalMaterialSchema(many=True)
+    ims_data = InstructionalMaterialSchema(many=True).dump(paginated_ims.items)
+    
     return jsonify({
-        'instructional_materials': im_schema.dump(paginated_ims.items),
+        'instructional_materials': ims_data,
         'total': paginated_ims.total,
         'pages': paginated_ims.pages,
         'current_page': paginated_ims.page,
@@ -160,13 +152,14 @@ def get_deleted_instructional_materials():
     page = request.args.get('page', 1, type=int)
     paginated_ims = InstructionalMaterialService.get_deleted_instructional_materials(page=page)
     
-    im_schema = InstructionalMaterialSchema(many=True)
+    ims_data = InstructionalMaterialSchema(many=True).dump(paginated_ims.items)
+    
     return jsonify({
-        'instructional_materials': im_schema.dump(paginated_ims.items),
+        'instructional_materials': ims_data,
         'total': paginated_ims.total,
         'pages': paginated_ims.pages,
         'current_page': paginated_ims.page,
-        'per_page': paginated_ims.per_page
+        'per_per_page': paginated_ims.per_page
     }), 200
 
 @im_blueprint.route('/<int:im_id>/restore', methods=['POST'])
