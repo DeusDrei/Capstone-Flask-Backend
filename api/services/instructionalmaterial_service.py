@@ -8,6 +8,7 @@ from api.models.instructionalmaterials import InstructionalMaterial
 import requests
 from urllib.parse import urlparse
 import tempfile
+import uuid
 
 load_dotenv()
 
@@ -15,7 +16,7 @@ class InstructionalMaterialService:
     @staticmethod
     def upload_pdf_to_s3(file_path, filename):
         """
-        Uploads PDF to S3 with the given filename
+        Uploads PDF to S3 with a unique folder path to prevent overwrites
         """
         try:
             bucket_name = os.getenv('AWS_BUCKET_NAME')
@@ -28,10 +29,17 @@ class InstructionalMaterialService:
             if not file_path.lower().endswith('.pdf'):
                 raise ValueError("File must be a PDF")
             
-            s3 = boto3.client('s3')
-            s3.upload_file(file_path, bucket_name, filename)
+            # Generate unique folder name using UUID
+            import uuid
+            unique_folder = str(uuid.uuid4())
             
-            return f"https://{bucket_name}.s3.amazonaws.com/{filename}"
+            # Create unique S3 key with folder structure
+            s3_key = f"instructional_materials/{unique_folder}/{filename}"
+            
+            s3 = boto3.client('s3')
+            s3.upload_file(file_path, bucket_name, s3_key)
+            
+            return f"https://{bucket_name}.s3.amazonaws.com/{s3_key}"
             
         except Exception as e:
             raise Exception(f"S3 upload error: {str(e)}")

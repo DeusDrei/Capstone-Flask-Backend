@@ -6,3 +6,4 @@ from .universityims import UniversityIM
 from .serviceims import ServiceIM
 from .collegesincluded import CollegeIncluded
 from .instructionalmaterials import InstructionalMaterial
+from .authors import Author
