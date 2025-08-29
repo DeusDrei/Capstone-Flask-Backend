@@ -17,7 +17,12 @@ class CollegeService:
         return new_college
 
     @staticmethod
-    def get_all_colleges(page=1):
+    def get_all_colleges():
+        """Get all active colleges"""
+        return College.query.filter_by(is_deleted=False).all()
+
+    @staticmethod
+    def get_all_colleges_paginated(page=1):
         """Get all active colleges with pagination"""
         per_page = 10
         return College.query.filter_by(is_deleted=False).paginate(

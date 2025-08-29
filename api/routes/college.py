@@ -39,12 +39,18 @@ def get_college(college_id):
     college_schema = CollegeSchema()
     return jsonify(college_schema.dump(college)), 200
 
-@college_blueprint.route('/', methods=['GET'])
+@college_blueprint.route('/all', methods=['GET'])
 @jwt_required
 def get_all_colleges():
+    colleges = CollegeService.get_all_colleges()
+    college_schema = CollegeSchema(many=True)
+    return jsonify({'colleges': college_schema.dump(colleges)}), 200
+
+@college_blueprint.route('/', methods=['GET'])
+@jwt_required
+def get_all_colleges_paginated():
     page = request.args.get('page', 1, type=int)
-    paginated_colleges = CollegeService.get_all_colleges(page=page)
-    
+    paginated_colleges = CollegeService.get_all_colleges_paginated(page=page)
     college_schema = CollegeSchema(many=True)
     return jsonify({
         'colleges': college_schema.dump(paginated_colleges.items),
