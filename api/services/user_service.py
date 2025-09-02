@@ -1,6 +1,9 @@
 from api.extensions import db
 from api.models.users import User
+from api.models.collegesincluded import CollegeIncluded
+from api.models.colleges import College
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import case, func
 
 class UserService:
     @staticmethod
@@ -33,14 +36,57 @@ class UserService:
         return new_user
 
     @staticmethod
-    def get_all_users(page=1):
-        """Get all active users with pagination"""
-        per_page = 10 
-        return User.query.filter_by(is_deleted=False).paginate(
-            page=page, 
-            per_page=per_page, 
-            error_out=False
-        )
+    def get_all_users(page=1, sort_by=None, sort_dir='asc'):
+        """Get all active users with pagination and optional sorting across dataset.
+
+        sort_by: one of allowed columns (id, last_name, first_name, middle_name, role, staff_id, email, phone_number, birth_date, updated_at, colleges)
+        sort_dir: 'asc' or 'desc'
+        """
+        per_page = 10
+        direction_desc = (str(sort_dir).lower() == 'desc')
+
+        # Base query (may expand for joins if needed)
+        query = User.query.filter_by(is_deleted=False)
+
+        # Mapping of allowed direct columns
+        allowed = {
+            'id': User.id,
+            'last_name': User.last_name,
+            'first_name': User.first_name,
+            'middle_name': User.middle_name,
+            'role': User.role,
+            'staff_id': User.staff_id,
+            'email': User.email,
+            'phone_number': User.phone_number,
+            'birth_date': User.birth_date,
+            'updated_at': User.updated_at,
+        }
+
+        if sort_by == 'role':
+            # Custom role ordering numeric mapping via CASE
+            role_case = case(
+                (User.role == 'Technical Admin', 0),
+                (User.role == 'UTLDO Admin', 1),
+                (User.role == 'Evaluator', 2),
+                (User.role == 'Faculty', 3),
+                else_=99
+            )
+            query = query.order_by(role_case.desc() if direction_desc else role_case.asc(), User.last_name.asc())
+        elif sort_by == 'colleges':
+            # Order by first (alphabetically) college abbreviation associated with user (case-insensitive)
+            first_col = func.min(func.lower(College.abbreviation))
+            query = query.outerjoin(CollegeIncluded, CollegeIncluded.user_id == User.id) \
+                         .outerjoin(College, College.id == CollegeIncluded.college_id) \
+                         .group_by(User.id) \
+                         .order_by(first_col.desc() if direction_desc else first_col.asc(), User.last_name.asc())
+        elif sort_by in allowed:
+            col = allowed[sort_by]
+            query = query.order_by(col.desc() if direction_desc else col.asc())
+        else:
+            # Default order (stable) if no or invalid sort provided
+            query = query.order_by(User.id.asc())
+
+        return query.paginate(page=page, per_page=per_page, error_out=False)
 
 
     @staticmethod

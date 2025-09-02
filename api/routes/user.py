@@ -27,7 +27,10 @@ def create_user():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-    return jsonify({'message': f'User {user.first_name} {user.last_name} created successfully'}), 201
+    return jsonify({
+        'message': f'User {user.first_name} {user.last_name} created successfully',
+        'id': user.id,
+    }), 201
 
 @user_blueprint.route('/<int:user_id>', methods=['GET'])
 @jwt_required
@@ -44,15 +47,21 @@ def get_user(user_id):
 @roles_required('Technical Admin')
 def get_all_users():
     page = request.args.get('page', 1, type=int)
-    paginated_users = UserService.get_all_users(page=page)
-    
+    sort_by = request.args.get('sort_by', type=str)
+    sort_dir = request.args.get('sort_dir', 'asc', type=str)
+    paginated_users = UserService.get_all_users(page=page, sort_by=sort_by, sort_dir=sort_dir)
+
     user_schema = UserSchema(many=True)
     return jsonify({
         'users': user_schema.dump(paginated_users.items),
         'total': paginated_users.total,
         'pages': paginated_users.pages,
         'current_page': paginated_users.page,
-        'per_page': paginated_users.per_page
+    'per_page': paginated_users.per_page,
+    'has_next': paginated_users.has_next,
+    'has_prev': paginated_users.has_prev,
+        'sort_by': sort_by,
+        'sort_dir': sort_dir
     }), 200
 
 @user_blueprint.route('/<int:user_id>', methods=['PUT'])
