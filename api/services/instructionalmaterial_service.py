@@ -261,3 +261,33 @@ class InstructionalMaterialService:
             
         except Exception as e:
             raise Exception(f"PDF download error: {str(e)}")
+        
+    @staticmethod
+    def get_instructional_materials_for_evaluator(page=1):
+        """
+        Get instructional materials with status 'For Evaluator Evaluation'
+        """
+        per_page = 10
+        return InstructionalMaterial.query.filter_by(
+            status='For Evaluator Evaluation', 
+            is_deleted=False
+        ).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
+
+    @staticmethod
+    def get_instructional_materials_for_utldo(page=1):
+        """
+        Get instructional materials with status 'For UTLDO Evaluation'
+        """
+        per_page = 10
+        return InstructionalMaterial.query.filter_by(
+            status='For UTLDO Evaluation', 
+            is_deleted=False
+        ).paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )

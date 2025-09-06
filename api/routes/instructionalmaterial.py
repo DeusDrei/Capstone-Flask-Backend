@@ -190,3 +190,51 @@ def download_instructional_material(im_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@im_blueprint.route('/get-for-evaluator', methods=['GET'])
+@jwt_required
+@roles_required('Evaluator')
+def get_instructional_material_for_evaluator():
+    """
+    Get instructional materials with status 'For Evaluator Evaluation'
+    """
+    try:
+        page = request.args.get('page', 1, type=int)
+        paginated_ims = InstructionalMaterialService.get_instructional_materials_for_evaluator(page=page)
+        
+        ims_data = InstructionalMaterialSchema(many=True).dump(paginated_ims.items)
+        
+        return jsonify({
+            'instructional_materials': ims_data,
+            'total': paginated_ims.total,
+            'pages': paginated_ims.pages,
+            'current_page': paginated_ims.page,
+            'per_page': paginated_ims.per_page
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@im_blueprint.route('/get-for-utldo', methods=['GET'])
+@jwt_required
+@roles_required('UTLDO Admin')
+def get_instructional_material_for_utldo():
+    """
+    Get instructional materials with status 'For UTLDO Evaluation'
+    """
+    try:
+        page = request.args.get('page', 1, type=int)
+        paginated_ims = InstructionalMaterialService.get_instructional_materials_for_utldo(page=page)
+        
+        ims_data = InstructionalMaterialSchema(many=True).dump(paginated_ims.items)
+        
+        return jsonify({
+            'instructional_materials': ims_data,
+            'total': paginated_ims.total,
+            'pages': paginated_ims.pages,
+            'current_page': paginated_ims.page,
+            'per_page': paginated_ims.per_page
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
