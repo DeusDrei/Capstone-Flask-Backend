@@ -25,14 +25,50 @@ def seed_serviceims():
     current_time = datetime.now(UTC)
     admin_user = "system"
 
-    # Assign 2-3 unique subjects to each college for ServiceIMs
+    # Map college abbreviation to its ID
+    college_map = {c.abbreviation: c.id for c in colleges}
+
+    # Map subject code to correct college abbreviation based on comments in subjects.py
+    subject_college_map = {
+        # CAF
+        "ACC101": "CAF", "ACC201": "CAF", "FIN101": "CAF",
+        # CADBE
+        "ARCH101": "CADBE", "ID101": "CADBE", "ENVP101": "CADBE",
+        # CAL
+        "ENG201": "CAL", "FIL101": "CAL", "LIT201": "CAL",
+        # CBA
+        "HRM101": "CBA", "MKT101": "CBA", "ENT101": "CBA",
+        # COC
+        "ADV101": "COC", "BROAD101": "COC", "JOUR101": "COC",
+        # CCIS
+        "CS101": "CCIS", "IT101": "CCIS",
+        # COED
+        "EDM101": "COED", "LIB101": "COED",
+        # CE
+        "CIV101": "CE", "MECH101": "CE",
+        # CHK
+        "PE101": "CHK",
+        # CL
+        "LAW101": "CL",
+        # CPSPA
+        "PA101": "CPSPA",
+        # CSSD
+        "SOC101": "CSSD",
+        # CS
+        "BIO101": "CS", "CHEM101": "CS", "MATH101": "CS",
+        # CTHTM
+        "HM101": "CTHTM", "TM101": "CTHTM", "TRM101": "CTHTM"
+    }
+
+    # Assign each subject to its correct college
     service_ims = []
-    for i, college in enumerate(colleges):
-        for j in range(2):
-            subj_idx = (i * 2 + j) % len(subjects)
+    for subj in subjects:
+        college_abbr = subject_college_map.get(subj.code)
+        college_id = college_map.get(college_abbr)
+        if college_id:
             service_ims.append({
-                "college_id": college.id,
-                "subject_id": subjects[subj_idx].id
+                "college_id": college_id,
+                "subject_id": subj.id
             })
 
     try:
