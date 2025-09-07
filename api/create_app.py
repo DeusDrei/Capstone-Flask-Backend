@@ -11,6 +11,7 @@ from .seeds.subjects import register_commands as register_subjects
 from .seeds.universityims import register_commands as register_universityims
 from .seeds.serviceims import register_commands as register_serviceims
 from .seeds.collegesincluded import register_commands as register_collegesincluded
+from .seeds.instructionalmaterials import register_commands as register_instructionalmaterials
 
 def create_app():
     app = Flask(__name__)
@@ -35,6 +36,7 @@ def create_app():
     register_universityims(app)
     register_serviceims(app)
     register_collegesincluded(app)
+    register_instructionalmaterials(app)
     
     api.register_blueprint(auth_blueprint)
     api.register_blueprint(user_blueprint)

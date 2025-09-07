@@ -41,7 +41,7 @@ def seed_serviceims():
         # COC
         "ADV101": "COC", "BROAD101": "COC", "JOUR101": "COC",
         # CCIS
-        "CS101": "CCIS", "IT101": "CCIS",
+        "CS101": "CCIS", "IT101": "CCIS", "INTE30033": "CCIS",
         # COED
         "EDM101": "COED", "LIB101": "COED",
         # CE

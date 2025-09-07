@@ -37,6 +37,7 @@ def seed_subjects():
         {"code": "BROAD101", "name": "Broadcasting", "created_by": admin_user, "updated_by": admin_user},
         {"code": "JOUR101", "name": "Journalism", "created_by": admin_user, "updated_by": admin_user},
         # CCIS
+        {"code": "INTE30033", "name": "Systems Integration and Architecture 1", "created_by": admin_user, "updated_by": admin_user},
         {"code": "CS101", "name": "Computer Science Fundamentals", "created_by": admin_user, "updated_by": admin_user},
         {"code": "IT101", "name": "Information Technology Basics", "created_by": admin_user, "updated_by": admin_user},
         # COED
