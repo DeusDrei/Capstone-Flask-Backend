@@ -137,9 +137,15 @@ class InstructionalMaterialService:
     @staticmethod
     def create_instructional_material(data, object_key, notes):
         """Create a new instructional material with pre-processed PDF data"""
+        # Determine status based on notes
+        if notes and notes.startswith("Missing sections"):
+            status = "For Resubmission"
+        else:
+            status = "For Evaluator Evaluation"
+
         new_im = InstructionalMaterial(
             im_type=data['im_type'],
-            status=data['status'],
+            status=status,
             validity=data['validity'],
             version=data['version'],
             s3_link=object_key,
@@ -149,7 +155,7 @@ class InstructionalMaterialService:
             university_im_id=data.get('university_im_id'),
             service_im_id=data.get('service_im_id')
         )
-        
+
         db.session.add(new_im)
         db.session.commit()
         return new_im
