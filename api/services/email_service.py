@@ -21,10 +21,10 @@ class EmailService:
         """
         try:
             # Email configuration
-            sender_email = os.getenv('EMAIL_SENDER', 'merit.pup@gmail.com')
-            smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-            smtp_port = int(os.getenv('SMTP_PORT', 587))
-            smtp_username = os.getenv('SMTP_USERNAME', 'merit.pup@gmail.com')
+            sender_email = os.getenv('EMAIL_SENDER')
+            smtp_server = os.getenv('SMTP_SERVER')
+            smtp_port = int(os.getenv('SMTP_PORT'))
+            smtp_username = os.getenv('SMTP_USERNAME')
             smtp_password = os.getenv('SMTP_PASSWORD')
             
             if not smtp_password:
