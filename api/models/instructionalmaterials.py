@@ -13,6 +13,10 @@ class InstructionalMaterial(db.Model):
     version = db.Column(db.String, nullable=False)
     s3_link = db.Column(db.String, nullable=False)
     notes = db.Column(db.String, nullable=True)
+    published = db.Column(db.Integer, default=0, nullable=False)
+    utldo_attempt = db.Column(db.Integer, default=0, nullable=False)
+    evaluator_attempt = db.Column(db.Integer, default=0, nullable=False)
+    ai_attempt = db.Column(db.Integer, default=0, nullable=False)
     created_by = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(UTC))
     updated_by = db.Column(db.String, nullable=False)
@@ -22,7 +26,7 @@ class InstructionalMaterial(db.Model):
     university_im = db.relationship('UniversityIM', backref='instructional_materials')
     service_im = db.relationship('ServiceIM', backref='instructional_materials')
 
-    def __init__(self, im_type, status, validity, version, s3_link, created_by, updated_by, university_im_id=None, service_im_id=None, notes=None):
+    def __init__(self, im_type, status, validity, version, s3_link, created_by, updated_by, university_im_id=None, service_im_id=None, notes=None, published=0, utldo_attempt=0, evaluator_attempt=0, ai_attempt=0):
         self.im_type = im_type
         self.status = status
         self.validity = validity
@@ -33,6 +37,10 @@ class InstructionalMaterial(db.Model):
         self.notes = notes
         self.university_im_id = university_im_id
         self.service_im_id = service_im_id
+        self.published = published
+        self.utldo_attempt = utldo_attempt
+        self.evaluator_attempt = evaluator_attempt
+        self.ai_attempt = ai_attempt
 
     def __repr__(self):
         return f'<InstructionalMaterial {self.id}: {self.im_type} ({self.version})>'

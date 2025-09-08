@@ -47,14 +47,14 @@ def create_instructional_material():
     try:
         data = InstructionalMaterialSchema().load(request.json)
         
-        if 'object_key' not in request.json:
-            return jsonify({'error': 'object_key is required'}), 400
-        
-        object_key = request.json['object_key']
+        if 's3_link' not in request.json:
+            return jsonify({'error': 's3_link is required'}), 400
+
+        s3_link = request.json['s3_link']
         notes = request.json.get('notes', '')
-        
-        im = InstructionalMaterialService.create_instructional_material(data, object_key, notes)
-        
+
+        im = InstructionalMaterialService.create_instructional_material(data, s3_link, notes)
+
         return jsonify({
             'message': f'Instructional Material {im.version} created successfully',
             'id': im.id,
