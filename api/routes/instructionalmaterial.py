@@ -4,7 +4,7 @@ from api.services.instructionalmaterial_service import InstructionalMaterialServ
 from api.schemas.instructionalmaterials import InstructionalMaterialSchema
 from sqlalchemy.exc import IntegrityError
 from api.middleware import jwt_required, roles_required
-import os
+import tempfile, os
 
 im_blueprint = Blueprint('instructionalmaterials', __name__, url_prefix="/instructionalmaterials")
 
@@ -134,6 +134,46 @@ def get_all_instructional_materials():
         'current_page': paginated_ims.page,
         'per_page': paginated_ims.per_page
     }), 200
+
+@im_blueprint.route('/delete-pdf', methods=['POST'])
+@jwt_required
+def delete_pdf_from_s3():
+    """
+    Delete a PDF from S3 using the object key provided in the request body.
+    """
+    try:
+        data = request.json
+        s3_link = data.get('s3_link')
+        if not s3_link:
+            return jsonify({'error': 's3_link is required'}), 400
+        result = InstructionalMaterialService.delete_pdf_from_s3(s3_link)
+        return jsonify({'success': result}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+        
+@im_blueprint.route('/check-missing-sections', methods=['POST'])
+@jwt_required
+def check_missing_sections():
+    """
+    Check a PDF for missing required sections using a file upload.
+    Accepts multipart/form-data with 'pdf_file'.
+    """
+    try:
+        if 'pdf_file' not in request.files:
+            return jsonify({'error': 'PDF file is required'}), 400
+        pdf_file = request.files['pdf_file']
+        
+        temp_dir = tempfile.gettempdir()
+        file_path = os.path.join(temp_dir, pdf_file.filename)
+        pdf_file.save(file_path)
+        try:
+            result = InstructionalMaterialService.check_missing_sections(file_path)
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        return jsonify({'result': result}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @im_blueprint.route('/<int:im_id>', methods=['DELETE'])
 @jwt_required
