@@ -1,5 +1,7 @@
 from api.extensions import db
 from api.models.subjects import Subject
+from api.models.subject_departments import SubjectDepartment
+from api.models.departments import Department
 
 class SubjectService:
     @staticmethod
@@ -85,3 +87,15 @@ class SubjectService:
         subject.is_deleted = False
         db.session.commit()
         return True
+
+    @staticmethod
+    def get_subjects_by_college_id(college_id: int):
+        """Return distinct active subjects linked to a college via SubjectDepartment -> Department."""
+        q = (
+            db.session.query(Subject)
+            .join(SubjectDepartment, SubjectDepartment.subject_id == Subject.id)
+            .join(Department, Department.id == SubjectDepartment.department_id)
+            .filter(Subject.is_deleted == False, Department.college_id == college_id)
+            .distinct()
+        )
+        return q.all()

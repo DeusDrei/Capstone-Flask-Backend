@@ -105,3 +105,14 @@ def restore_subject(subject_id):
     if not success:
         return jsonify({'error': 'Subject not found or already active'}), 404
     return jsonify({'message': 'Subject restored successfully'}), 200
+
+
+@subject_blueprint.route('/college/<int:college_id>', methods=['GET'])
+@jwt_required
+def get_subjects_by_college(college_id):
+    try:
+        subjects = SubjectService.get_subjects_by_college_id(college_id)
+        subject_schema = SubjectSchema(many=True)
+        return jsonify(subject_schema.dump(subjects)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

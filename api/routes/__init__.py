@@ -8,3 +8,4 @@ from .serviceim import *
 from .collegeincluded import *
 from .instructionalmaterial import *
 from .author import *
+from .subject_department import *

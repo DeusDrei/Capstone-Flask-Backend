@@ -7,3 +7,4 @@ from .serviceims import ServiceIM
 from .collegesincluded import CollegeIncluded
 from .instructionalmaterials import InstructionalMaterial
 from .authors import Author
+from .subject_departments import SubjectDepartment
