@@ -300,30 +300,31 @@ class InstructionalMaterialService:
                 incoming_status = status_map.get(key, incoming_status_raw.strip())
 
             status_changed = False
+            incremented = False
             # If status is provided and different -> increment according to the new status
             if incoming_status and incoming_status != im.status:
                 InstructionalMaterialService._increment_counters_for_status(im, incoming_status, is_model=True)
                 im.status = incoming_status
                 status_changed = True
+                incremented = True
 
-            # If a new PDF is uploaded and status was not changed in this update,
-            # but the current status is one of the tracked statuses, increment for that status.
+            # If a new PDF is uploaded and status wasn't changed in this update,
+            # but the current status is one of the tracked statuses, increment for that status (only if not already incremented)
             tracked_statuses = set(status_map.values())
             if object_key and (not status_changed):
                 # new file uploaded (replacement)
                 if im.s3_link and im.s3_link != object_key:
                     # increment based on current status if it's a tracked one
-                    if im.status in tracked_statuses:
+                    if im.status in tracked_statuses and not incremented:
                         InstructionalMaterialService._increment_counters_for_status(im, im.status, is_model=True)
+                        incremented = True
                     InstructionalMaterialService.delete_pdf_from_s3(im.s3_link)
                 im.s3_link = object_key
 
-            # If only status re-submission with same status should also be considered:
-            # (optional) if you want repeated updates with same incoming_status to increment,
-            # uncomment the block below:
-            # Only increment when incoming_status equals current status and status wasn't just changed above.
-            if incoming_status and incoming_status == im.status and not status_changed:
+            # Only increment when incoming_status equals current status and status wasn't just changed above, and not already incremented
+            if incoming_status and incoming_status == im.status and not status_changed and not incremented:
                 InstructionalMaterialService._increment_counters_for_status(im, incoming_status, is_model=True)
+                incremented = True
 
             if notes is not None:
                 im.notes = notes
