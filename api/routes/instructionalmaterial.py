@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from flask import send_file, redirect
 from flask_smorest import Blueprint
 from api.services.instructionalmaterial_service import InstructionalMaterialService
 from api.schemas.instructionalmaterials import InstructionalMaterialSchema
@@ -230,10 +231,41 @@ def download_instructional_material(im_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@im_blueprint.route('/<int:im_id>/pdf', methods=['GET'])
+@jwt_required
+def stream_instructional_material_pdf(im_id):
+    """Return a direct S3 URL redirect or (future) a streamed file for embedding in iframe."""
+    try:
+        im = InstructionalMaterialService.get_instructional_material_by_id(im_id)
+        if not im or im.is_deleted or not im.s3_link:
+            return jsonify({'error': 'Instructional Material not found or no PDF available'}), 404
+        # Build direct S3 https URL
+        try:
+            url = InstructionalMaterialService.get_s3_url(im.s3_link)
+            # Use redirect (302) so the browser loads the PDF directly
+            return redirect(url, code=302)
+        except Exception as e:
+            return jsonify({'error': f'URL build failed: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@im_blueprint.route('/<int:im_id>/presigned', methods=['GET'])
+@jwt_required
+def get_presigned_pdf_url(im_id):
+    """Return JSON with a presigned URL for the PDF so frontend can embed without auth headers."""
+    try:
+        im = InstructionalMaterialService.get_instructional_material_by_id(im_id)
+        if not im or im.is_deleted or not im.s3_link:
+            return jsonify({'error': 'Instructional Material not found or no PDF available'}), 404
+        url = InstructionalMaterialService.generate_presigned_url(im.s3_link, expires_in=900)
+        return jsonify({'url': url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     
 @im_blueprint.route('/get-for-evaluator', methods=['GET'])
 @jwt_required
-@roles_required('Evaluator')
+@roles_required('Evaluator', 'UTLDO Admin', 'Technical Admin')
 def get_instructional_material_for_evaluator():
     """
     Get instructional materials with status 'For Evaluator Evaluation'
@@ -257,7 +289,7 @@ def get_instructional_material_for_evaluator():
 
 @im_blueprint.route('/get-for-utldo', methods=['GET'])
 @jwt_required
-@roles_required('UTLDO Admin')
+@roles_required('UTLDO Admin', 'Technical Admin')
 def get_instructional_material_for_utldo():
     """
     Get instructional materials with status 'For UTLDO Evaluation'

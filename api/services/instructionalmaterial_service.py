@@ -8,6 +8,7 @@ from api.models.instructionalmaterials import InstructionalMaterial
 from api.services.email_service import EmailService
 import tempfile
 import uuid
+import boto3
 
 load_dotenv()
 
@@ -81,7 +82,12 @@ class InstructionalMaterialService:
             s3_key = f"instructional_materials/{unique_folder}/{filename}"
             
             s3 = boto3.client('s3')
-            s3.upload_file(file_path, bucket_name, s3_key)
+            # Set metadata so default behavior is inline viewing
+            extra_args = {
+                'ContentType': 'application/pdf',
+                'ContentDisposition': f'inline; filename="{filename}"'
+            }
+            s3.upload_file(file_path, bucket_name, s3_key, ExtraArgs=extra_args)
             
             return s3_key
             
@@ -430,6 +436,27 @@ class InstructionalMaterialService:
             
         except Exception as e:
             raise Exception(f"PDF download error: {str(e)}")
+
+    @staticmethod
+    def generate_presigned_url(object_key, expires_in=900):
+        """Generate a presigned GET URL for the PDF (default 15 minutes) forcing inline render."""
+        try:
+            if not object_key:
+                raise ValueError("Object key required")
+            bucket_name = os.getenv('AWS_BUCKET_NAME')
+            if not bucket_name:
+                raise ValueError("AWS_BUCKET_NAME not found in environment variables")
+            s3 = boto3.client('s3')
+            params = {
+                'Bucket': bucket_name,
+                'Key': object_key,
+                'ResponseContentType': 'application/pdf',
+                'ResponseContentDisposition': f'inline; filename="{os.path.basename(object_key)}"'
+            }
+            url = s3.generate_presigned_url('get_object', Params=params, ExpiresIn=expires_in)
+            return url
+        except Exception as e:
+            raise Exception(f"Presign error: {str(e)}")
         
     @staticmethod
     def get_instructional_materials_for_evaluator(page=1):
