@@ -487,3 +487,18 @@ class InstructionalMaterialService:
             per_page=per_page, 
             error_out=False
         )
+
+    @staticmethod
+    def get_instructional_materials_for_certification(page=1):
+        """
+        Get instructional materials with status 'For Certification'
+        """
+        per_page = 10
+        return InstructionalMaterial.query.filter_by(
+            status='For Certification',
+            is_deleted=False
+        ).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )

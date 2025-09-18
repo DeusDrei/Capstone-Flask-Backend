@@ -310,3 +310,25 @@ def get_instructional_material_for_utldo():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+    
+@im_blueprint.route('/get-for-certification', methods=['GET'])
+@jwt_required
+@roles_required('UTLDO Admin', 'Technical Admin')
+def get_instructional_materials_for_certification():
+    """
+    Get instructional materials with status 'For Certification'
+    """
+    try:
+        page = request.args.get('page', 1, type=int)
+        paginated_ims = InstructionalMaterialService.get_instructional_materials_for_certification(page=page)
+        ims_data = InstructionalMaterialSchema(many=True).dump(paginated_ims.items)
+        return jsonify({
+            'instructional_materials': ims_data,
+            'total': paginated_ims.total,
+            'pages': paginated_ims.pages,
+            'current_page': paginated_ims.page,
+            'per_page': paginated_ims.per_page
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
