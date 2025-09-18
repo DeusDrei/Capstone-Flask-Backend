@@ -2,6 +2,9 @@ from api.extensions import db
 from api.models.subjects import Subject
 from api.models.subject_departments import SubjectDepartment
 from api.models.departments import Department
+from api.models.instructionalmaterials import InstructionalMaterial
+from api.models.universityims import UniversityIM
+from api.models.serviceims import ServiceIM
 
 class SubjectService:
     @staticmethod
@@ -99,3 +102,35 @@ class SubjectService:
             .distinct()
         )
         return q.all()
+
+    @staticmethod
+    def get_subject_by_im_id(im_id: int):
+        """Resolve subject associated with an InstructionalMaterial.
+
+        Logic:
+        - Load IM (including soft deleted? we mimic get_instructional_material_by_id behavior which includes soft deleted) but reject if missing.
+        - If IM has university_im_id -> fetch UniversityIM -> subject_id.
+        - Else if IM has service_im_id -> fetch ServiceIM -> subject_id.
+        - Return Subject (even if soft-deleted? We will respect is_deleted flag and return None if deleted) to stay consistent with get_subject_by_id route.
+        """
+        im: InstructionalMaterial | None = db.session.get(InstructionalMaterial, im_id)
+        if not im:
+            return None
+
+        subject_id = None
+        if im.university_im_id:
+            uni = db.session.get(UniversityIM, im.university_im_id)
+            if uni:
+                subject_id = uni.subject_id
+        if subject_id is None and im.service_im_id:
+            svc = db.session.get(ServiceIM, im.service_im_id)
+            if svc:
+                subject_id = svc.subject_id
+
+        if subject_id is None:
+            return None
+
+        subj = db.session.get(Subject, subject_id)
+        if not subj or subj.is_deleted:
+            return None
+        return subj

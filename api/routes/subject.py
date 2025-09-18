@@ -116,3 +116,22 @@ def get_subjects_by_college(college_id):
         return jsonify(subject_schema.dump(subjects)), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@subject_blueprint.route('/instructionalmaterial/<int:im_id>', methods=['GET'])
+@jwt_required
+def get_subject_by_im(im_id):
+    """Return the subject linked to an Instructional Material id.
+
+    Resolution path:
+    - IM -> university_im.subject_id OR service_im.subject_id
+    - Returns 404 if IM or subject not found / subject soft-deleted.
+    """
+    try:
+        subj = SubjectService.get_subject_by_im_id(im_id)
+        if not subj:
+            return jsonify({'error': 'Subject not found for IM'}), 404
+        subject_schema = SubjectSchema()
+        return jsonify(subject_schema.dump(subj)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
