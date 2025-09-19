@@ -54,6 +54,16 @@ def get_all_subjects():
         'per_page': paginated_subjects.per_page
     }), 200
 
+@subject_blueprint.route('/all', methods=['GET'])
+@jwt_required
+def get_all_subjects_no_pagination():
+    try:
+        subjects = SubjectService.get_all_subjects_no_pagination()
+        subject_schema = SubjectSchema(many=True)
+        return jsonify(subject_schema.dump(subjects)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @subject_blueprint.route('/<int:subject_id>', methods=['PUT'])
 @jwt_required
 @roles_required('Technical Admin')

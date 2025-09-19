@@ -32,6 +32,11 @@ class SubjectService:
         )
 
     @staticmethod
+    def get_all_subjects_no_pagination():
+        """Get all active subjects (no pagination)"""
+        return Subject.query.filter_by(is_deleted=False).all()
+
+    @staticmethod
     def get_subject_by_id(subject_id):
         """Get subject by ID (including soft-deleted ones)"""
         return db.session.get(Subject, subject_id)

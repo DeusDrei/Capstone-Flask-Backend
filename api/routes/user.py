@@ -64,6 +64,16 @@ def get_all_users():
         'sort_dir': sort_dir
     }), 200
 
+@user_blueprint.route('/all', methods=['GET'])
+@jwt_required
+@roles_required('Technical Admin')
+def get_all_users_no_pagination():
+    sort_by = request.args.get('sort_by', type=str)
+    sort_dir = request.args.get('sort_dir', 'asc', type=str)
+    users = UserService.get_all_users_no_pagination(sort_by=sort_by, sort_dir=sort_dir)
+    user_schema = UserSchema(many=True)
+    return jsonify(user_schema.dump(users)), 200
+
 @user_blueprint.route('/<int:user_id>', methods=['PUT'])
 @jwt_required
 def update_user(user_id):

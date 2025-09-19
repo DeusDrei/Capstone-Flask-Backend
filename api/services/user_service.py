@@ -90,6 +90,45 @@ class UserService:
 
 
     @staticmethod
+    def get_all_users_no_pagination(sort_by=None, sort_dir='asc'):
+        """Get all active users without pagination. Optional basic sorting.
+
+        sort_by: limited subset of columns for safety
+        sort_dir: 'asc' or 'desc'
+        """
+        direction_desc = (str(sort_dir).lower() == 'desc')
+
+        query = User.query.filter_by(is_deleted=False)
+
+        allowed = {
+            'id': User.id,
+            'last_name': User.last_name,
+            'first_name': User.first_name,
+            'role': User.role,
+            'staff_id': User.staff_id,
+            'email': User.email,
+            'updated_at': User.updated_at,
+        }
+
+        if sort_by == 'role':
+            role_case = case(
+                (User.role == 'Technical Admin', 0),
+                (User.role == 'UTLDO Admin', 1),
+                (User.role == 'Evaluator', 2),
+                (User.role == 'Faculty', 3),
+                else_=99
+            )
+            query = query.order_by(role_case.desc() if direction_desc else role_case.asc(), User.last_name.asc())
+        elif sort_by in allowed:
+            col = allowed[sort_by]
+            query = query.order_by(col.desc() if direction_desc else col.asc())
+        else:
+            query = query.order_by(User.id.asc())
+
+        return query.all()
+
+
+    @staticmethod
     def get_user_by_id(user_id):
         """Get user by ID (including soft-deleted ones)"""
         return db.session.get(User, user_id)
