@@ -134,7 +134,7 @@ class UserTestCase(TestCase):
             # Try duplicate
             response = self.client.post("/users/", 
                 json={
-                    "role": "Evaluator",
+                    "role": "PIMEC",
                     "staff_id": "EVAL005",
                     "first_name": "Duplicate",
                     "last_name": "User",

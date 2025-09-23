@@ -263,17 +263,17 @@ def get_presigned_pdf_url(im_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-@im_blueprint.route('/get-for-evaluator', methods=['GET'])
+@im_blueprint.route('/get-for-pimec', methods=['GET'])
 @jwt_required
-@roles_required('Evaluator', 'UTLDO Admin', 'Technical Admin')
-def get_instructional_material_for_evaluator():
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
+def get_instructional_material_for_pimec():
     """
-    Get instructional materials with status 'For Evaluator Evaluation'
+    Get instructional materials with status 'For PIMECm Evaluation'
     """
     try:
         page = request.args.get('page', 1, type=int)
-        paginated_ims = InstructionalMaterialService.get_instructional_materials_for_evaluator(page=page)
-        
+        paginated_ims = InstructionalMaterialService.get_instructional_materials_for_pimec(page=page)
+
         ims_data = InstructionalMaterialSchema(many=True).dump(paginated_ims.items)
         
         return jsonify({

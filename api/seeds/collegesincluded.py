@@ -34,7 +34,7 @@ def seed_collegesincluded():
                     "user_id": user.id
                 })
         else:
-            # Faculty/Evaluator: only 2 colleges, rotating
+            # Faculty/PIMEC: only 2 colleges, rotating
             for i in range(2):
                 college = colleges[(user.id + i) % len(colleges)]
                 college_included.append({

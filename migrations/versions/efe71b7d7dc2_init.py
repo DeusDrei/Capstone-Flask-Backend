@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 20e8f1beda85
+Revision ID: efe71b7d7dc2
 Revises: 
-Create Date: 2025-09-08 14:30:25.481807
+Create Date: 2025-09-23 10:23:43.289951
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20e8f1beda85'
+revision = 'efe71b7d7dc2'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,6 +30,20 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('abbreviation'),
     sa.UniqueConstraint('name')
+    )
+    op.create_table('imerpimec',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('a', sa.Integer(), nullable=False),
+    sa.Column('b', sa.Integer(), nullable=False),
+    sa.Column('c', sa.Integer(), nullable=False),
+    sa.Column('d', sa.Integer(), nullable=False),
+    sa.Column('e', sa.Integer(), nullable=False),
+    sa.Column('created_by', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_by', sa.String(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('is_deleted', sa.Boolean(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('subjects',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -94,6 +108,13 @@ def upgrade():
     sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('subject_departments',
+    sa.Column('subject_id', sa.Integer(), nullable=False),
+    sa.Column('department_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['department_id'], ['departments.id'], ),
+    sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], ),
+    sa.PrimaryKeyConstraint('subject_id', 'department_id')
+    )
     op.create_table('universityims',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('college_id', sa.Integer(), nullable=False),
@@ -110,6 +131,7 @@ def upgrade():
     sa.Column('im_type', sa.String(), nullable=False),
     sa.Column('university_im_id', sa.Integer(), nullable=True),
     sa.Column('service_im_id', sa.Integer(), nullable=True),
+    sa.Column('imerpimec_id', sa.Integer(), nullable=True),
     sa.Column('status', sa.String(), nullable=False),
     sa.Column('validity', sa.String(), nullable=False),
     sa.Column('version', sa.String(), nullable=False),
@@ -117,13 +139,14 @@ def upgrade():
     sa.Column('notes', sa.String(), nullable=True),
     sa.Column('published', sa.Integer(), nullable=False),
     sa.Column('utldo_attempt', sa.Integer(), nullable=False),
-    sa.Column('evaluator_attempt', sa.Integer(), nullable=False),
+    sa.Column('pimec_attempt', sa.Integer(), nullable=False),
     sa.Column('ai_attempt', sa.Integer(), nullable=False),
     sa.Column('created_by', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_by', sa.String(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('is_deleted', sa.Boolean(), nullable=True),
+    sa.ForeignKeyConstraint(['imerpimec_id'], ['imerpimec.id'], ),
     sa.ForeignKeyConstraint(['service_im_id'], ['serviceims.id'], ),
     sa.ForeignKeyConstraint(['university_im_id'], ['universityims.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -143,10 +166,12 @@ def downgrade():
     op.drop_table('authors')
     op.drop_table('instructionalmaterials')
     op.drop_table('universityims')
+    op.drop_table('subject_departments')
     op.drop_table('serviceims')
     op.drop_table('departments')
     op.drop_table('collegesincluded')
     op.drop_table('users')
     op.drop_table('subjects')
+    op.drop_table('imerpimec')
     op.drop_table('colleges')
     # ### end Alembic commands ###

@@ -14,8 +14,8 @@ load_dotenv()
 
 class InstructionalMaterialService:
     @staticmethod
-    def _compute_version(published, utldo, evaluator, ai):
-        return f"{published}.{utldo}.{evaluator}.{ai}"
+    def _compute_version(published, utldo, pimec, ai):
+        return f"{published}.{utldo}.{pimec}.{ai}"
 
     @staticmethod
     def _increment_counters_for_status(im_or_counters, status, is_model=False):
@@ -26,13 +26,13 @@ class InstructionalMaterialService:
         Behavior:
         - Published: increment published and reset other attempts to 0
         - For UTLDO Evaluation: increment utldo_attempt
-        - For Evaluator Evaluation: increment evaluator_attempt
+        - For PIMEC Evaluation: increment pimec_attempt
         - For Resubmission: increment ai_attempt
         """
         key_map = {
             'Published': 'published',
             'For UTLDO Evaluation': 'utldo_attempt',
-            'For Evaluator Evaluation': 'evaluator_attempt',
+            'For PIMEC Evaluation': 'pimec_attempt',
             'For Resubmission': 'ai_attempt'
         }
 
@@ -42,7 +42,7 @@ class InstructionalMaterialService:
                 # increment published and reset others
                 im_or_counters.published = (im_or_counters.published or 0) + 1
                 im_or_counters.utldo_attempt = 0
-                im_or_counters.evaluator_attempt = 0
+                im_or_counters.pimec_attempt = 0
                 im_or_counters.ai_attempt = 0
             else:
                 key = key_map.get(status)
@@ -54,7 +54,7 @@ class InstructionalMaterialService:
             if status == 'Published':
                 im_or_counters['published'] = im_or_counters.get('published', 0) + 1
                 im_or_counters['utldo_attempt'] = 0
-                im_or_counters['evaluator_attempt'] = 0
+                im_or_counters['pimec_attempt'] = 0
                 im_or_counters['ai_attempt'] = 0
             else:
                 key = key_map.get(status)
@@ -197,19 +197,19 @@ class InstructionalMaterialService:
             counters = {
                 'published': 0,
                 'utldo_attempt': 0,
-                'evaluator_attempt': 0,
+                'pimec_attempt': 0,
                 'ai_attempt': 0
             }
 
             status = data.get('status')
             # Increment according to initial status
-            if status in ['Published', 'For UTLDO Evaluation', 'For Evaluator Evaluation', 'For Resubmission', 'For Resubmittion']:
+            if status in ['Published', 'For UTLDO Evaluation', 'For PIMEC Evaluation', 'For Resubmission', 'For Resubmittion']:
                 InstructionalMaterialService._increment_counters_for_status(counters, status, is_model=False)
 
             version = InstructionalMaterialService._compute_version(
                 counters['published'],
                 counters['utldo_attempt'],
-                counters['evaluator_attempt'],
+                counters['pimec_attempt'],
                 counters['ai_attempt']
             )
 
@@ -227,9 +227,10 @@ class InstructionalMaterialService:
                 notes=notes,
                 university_im_id=data.get('university_im_id'),
                 service_im_id=data.get('service_im_id'),
+                imerpimec_id=data.get('imerpimec_id'),
                 published=counters['published'],
                 utldo_attempt=counters['utldo_attempt'],
-                evaluator_attempt=counters['evaluator_attempt'],
+                pimec_attempt=counters['pimec_attempt'],
                 ai_attempt=counters['ai_attempt']
             )
 
@@ -296,7 +297,7 @@ class InstructionalMaterialService:
             status_map = {
                 'published': 'Published',
                 'for utldo evaluation': 'For UTLDO Evaluation',
-                'for evaluator evaluation': 'For Evaluator Evaluation',
+                'for pimec evaluation': 'For PIMEC Evaluation',
                 'for resubmission': 'For Resubmission',
                 'for resubmittion': 'For Resubmission'  # accept common misspelling
             }
@@ -336,14 +337,14 @@ class InstructionalMaterialService:
                 im.notes = notes
 
             for key, value in data.items():
-                if hasattr(im, key) and key not in ['s3_link', 'notes', 'published', 'utldo_attempt', 'evaluator_attempt', 'ai_attempt', 'version']:
+                if hasattr(im, key) and key not in ['s3_link', 'notes', 'published', 'utldo_attempt', 'pimec_attempt', 'ai_attempt', 'version']:
                     setattr(im, key, value)
 
             # Recompute version from counters before commit
             im.version = InstructionalMaterialService._compute_version(
                 im.published or 0,
                 im.utldo_attempt or 0,
-                im.evaluator_attempt or 0,
+                im.pimec_attempt or 0,
                 im.ai_attempt or 0
             )
 
@@ -459,13 +460,13 @@ class InstructionalMaterialService:
             raise Exception(f"Presign error: {str(e)}")
         
     @staticmethod
-    def get_instructional_materials_for_evaluator(page=1):
+    def get_instructional_materials_for_pimec(page=1):
         """
-        Get instructional materials with status 'For Evaluator Evaluation'
+        Get instructional materials with status 'For PIMEC Evaluation'
         """
         per_page = 10
         return InstructionalMaterial.query.filter_by(
-            status='For Evaluator Evaluation', 
+            status='For PIMEC Evaluation', 
             is_deleted=False
         ).paginate(
             page=page, 

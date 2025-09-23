@@ -99,9 +99,9 @@ def seed_users():
             "created_by": "system",
             "updated_by": "system"
         },
-        # Evaluators
+        # PIMEC
         {
-            "role": "Evaluator",
+            "role": "PIMEC",
             "staff_id": "EVAL001",
             "first_name": "Eve",
             "middle_name": "Grace",
@@ -114,7 +114,7 @@ def seed_users():
             "updated_by": "system"
         },
         {
-            "role": "Evaluator",
+            "role": "PIMEC",
             "staff_id": "EVAL002",
             "first_name": "Frank",
             "middle_name": "Henry",

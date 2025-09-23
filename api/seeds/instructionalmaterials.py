@@ -20,7 +20,7 @@ def seed_instructionalmaterials():
             "im_type": "university",  # or "service" if appropriate
             "status": "For Resubmission",
             "validity": "2026",
-            "version": "0.0.0.1",  # published.utldo_attempt.evaluator_attempt.ai_attempt
+            "version": "0.0.0.1",  # published.utldo_attempt.pimec_attempt.ai_attempt
             "s3_link": "instructional_materials/a542efa1-f009-4a82-8277-02ec74db0439/INTE 30033 Systems Integration and Architecture 1.pdf",
             "created_by": admin_user,
             "updated_by": admin_user,
@@ -30,7 +30,7 @@ def seed_instructionalmaterials():
             # counters consistent with status "For Resubmission" (ai_attempt incremented)
             "published": 0,
             "utldo_attempt": 0,
-            "evaluator_attempt": 0,
+            "pimec_attempt": 0,
             "ai_attempt": 1,
         }
     ]

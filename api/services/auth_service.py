@@ -7,7 +7,7 @@ from datetime import datetime, UTC
 class AuthService:
     @staticmethod
     def register_user(data):
-        VALID_ROLES = ['Faculty', 'Technical Admin', 'UTLDO Admin', 'Evaluator']
+        VALID_ROLES = ['Faculty', 'Technical Admin', 'UTLDO Admin', 'PIMEC']
     
         # Validate role
         if 'role' not in data or data['role'] not in VALID_ROLES:

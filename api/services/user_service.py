@@ -9,7 +9,7 @@ class UserService:
     @staticmethod
     def create_user(data):
         """Create a new user with role validation"""
-        VALID_ROLES = ['Faculty', 'Technical Admin', 'UTLDO Admin', 'Evaluator']
+        VALID_ROLES = ['Faculty', 'Technical Admin', 'UTLDO Admin', 'PIMEC']
     
         # Validate role
         if 'role' not in data or data['role'] not in VALID_ROLES:
@@ -67,7 +67,7 @@ class UserService:
             role_case = case(
                 (User.role == 'Technical Admin', 0),
                 (User.role == 'UTLDO Admin', 1),
-                (User.role == 'Evaluator', 2),
+                (User.role == 'PIMEC', 2),
                 (User.role == 'Faculty', 3),
                 else_=99
             )
@@ -114,7 +114,7 @@ class UserService:
             role_case = case(
                 (User.role == 'Technical Admin', 0),
                 (User.role == 'UTLDO Admin', 1),
-                (User.role == 'Evaluator', 2),
+                (User.role == 'PIMEC', 2),
                 (User.role == 'Faculty', 3),
                 else_=99
             )
@@ -136,7 +136,7 @@ class UserService:
     @staticmethod
     def update_user(user_id, data):
         """Update user data with role validation if provided"""
-        VALID_ROLES = ['Faculty', 'Technical Admin', 'UTLDO Admin', 'Evaluator'] 
+        VALID_ROLES = ['Faculty', 'Technical Admin', 'UTLDO Admin', 'PIMEC'] 
         
         user = User.query.filter_by(id=user_id, is_deleted=False).first()
         if not user:
