@@ -10,3 +10,4 @@ from .instructionalmaterial import *
 from .author import *
 from .subject_department import *
 from .imerpimec import *
+from .departmentincluded import *

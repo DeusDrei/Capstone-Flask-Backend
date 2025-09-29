@@ -6,3 +6,5 @@ from .subject_departments import register_commands as register_subject_departmen
 from .universityims import register_commands as register_universityims
 from .serviceims import register_commands as register_serviceims
 from .collegesincluded import register_commands as register_collegesinlcuded
+from .departmentsincluded import register_commands as register_departmentsincluded
+from .instructionalmaterials import register_commands as register_instructionalmaterials
