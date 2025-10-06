@@ -6,3 +6,5 @@ class UniversityIMSchema(Schema):
     department_id = fields.Int(required=True)
     subject_id = fields.Int(required=True)
     year_level = fields.Int(required=True) 
+
+    user_id = fields.Int(load_only=True)

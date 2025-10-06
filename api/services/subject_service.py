@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.subjects import Subject
+from api.services.activitylog_service import ActivityLogService
 from api.models.subject_departments import SubjectDepartment
 from api.models.departments import Department
 from api.models.instructionalmaterials import InstructionalMaterial
@@ -19,6 +20,17 @@ class SubjectService:
         
         db.session.add(new_subject)
         db.session.commit()
+        
+        if data.get('user_id'):
+            ActivityLogService.log_activity(
+                user_id=data['user_id'],
+                action="CREATE",
+                table_name="subjects",
+                description=f"Created subject {new_subject.id}",
+                record_id=new_subject.id,
+                new_values={"name": new_subject.name, "code": new_subject.code}
+            )
+        
         return new_subject
 
     @staticmethod
@@ -49,6 +61,12 @@ class SubjectService:
             return None
         
         try:
+            # Capture old values before update
+            old_values = {
+                "name": subject.name,
+                "code": subject.code
+            }
+            
             # Update only the provided fields
             for key, value in data.items():
                 if hasattr(subject, key):
@@ -58,6 +76,18 @@ class SubjectService:
                 subject.updated_by = data['updated_by']
             
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="subjects",
+                    description=f"Updated subject {subject_id}",
+                    record_id=subject_id,
+                    old_values=old_values,
+                    new_values={"name": subject.name, "code": subject.code}
+                )
+            
             return subject
             
         except Exception as e:
@@ -72,7 +102,7 @@ class SubjectService:
             return False
         
         subject.is_deleted = True
-        db.session.commit()
+        db.session.commit()   
         return True
 
     @staticmethod

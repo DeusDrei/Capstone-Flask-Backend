@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.serviceims import ServiceIM
+from api.services.activitylog_service import ActivityLogService
 from api.models.colleges import College
 from api.models.subjects import Subject
 from sqlalchemy.exc import IntegrityError
@@ -25,6 +26,17 @@ class ServiceIMService:
         
         db.session.add(serviceim)
         db.session.commit()
+        
+        if data.get('user_id'):
+            ActivityLogService.log_activity(
+                user_id=data['user_id'],
+                action="CREATE",
+                table_name="serviceims",
+                description=f"Created service IM {serviceim.id}",
+                record_id=serviceim.id,
+                new_values={"college_id": serviceim.college_id, "subject_id": serviceim.subject_id}
+            )
+        
         return serviceim
 
     @staticmethod
@@ -62,9 +74,27 @@ class ServiceIMService:
                 raise ValueError("Subject not found")
 
         try:
+            # Capture old values before update
+            old_values = {
+                "college_id": serviceim.college_id,
+                "subject_id": serviceim.subject_id
+            }
+            
             for key, value in data.items():
                 setattr(serviceim, key, value)
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="serviceims",
+                    description=f"Updated service IM {serviceim_id}",
+                    record_id=serviceim_id,
+                    old_values=old_values,
+                    new_values={"college_id": serviceim.college_id, "subject_id": serviceim.subject_id}
+                )
+            
             return serviceim
         except IntegrityError:
             db.session.rollback()

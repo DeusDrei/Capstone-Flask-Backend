@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.users import User
+from api.services.activitylog_service import ActivityLogService
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, decode_token
 from datetime import datetime, UTC
@@ -38,6 +39,12 @@ class AuthService:
         user = User.query.filter_by(email=email, is_deleted=False).first()
         
         if user and check_password_hash(user.password, password):
+            ActivityLogService.log_activity(
+                user_id=user.id,
+                action="LOGIN",
+                table_name="users",
+                description=f"User {user.email} logged in"
+            )
             return user
         return None
 

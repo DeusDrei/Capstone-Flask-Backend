@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from api.extensions import db
 from api.models.instructionalmaterials import InstructionalMaterial
 from api.services.email_service import EmailService
+from api.services.activitylog_service import ActivityLogService
 import tempfile
 import uuid
 import boto3
@@ -242,6 +243,16 @@ class InstructionalMaterialService:
             
             print(f"IM committed to database with ID: {new_im.id}")  # Debug
             
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="CREATE",
+                    table_name="instructionalmaterials",
+                    description=f"Created instructional material {new_im.id}",
+                    record_id=new_im.id,
+                    new_values={"status": new_im.status, "version": new_im.version}
+                )
+            
             # Send email notification after successful creation
             try:
                 # Extract filename from object_key
@@ -293,6 +304,13 @@ class InstructionalMaterialService:
             return None
 
         try:
+            # Capture old values before update
+            old_values = {
+                "status": im.status,
+                "version": im.version,
+                "notes": im.notes
+            }
+            
             # Normalize incoming status and define accepted canonical statuses
             incoming_status_raw = data.get('status')
             status_map = {
@@ -350,6 +368,17 @@ class InstructionalMaterialService:
             )
 
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="instructionalmaterials",
+                    description=f"Updated instructional material {im_id}",
+                    record_id=im_id,
+                    old_values=old_values,
+                    new_values={"status": im.status, "version": im.version, "notes": im.notes}
+                )
 
             # Send email notification after successful update
             try:

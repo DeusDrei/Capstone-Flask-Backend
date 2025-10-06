@@ -10,3 +10,4 @@ from .authors import Author
 from .subject_departments import SubjectDepartment
 from .imerpimec import IMERPIMEC
 from .departmentsincluded import DepartmentIncluded
+from .activitylog import ActivityLog

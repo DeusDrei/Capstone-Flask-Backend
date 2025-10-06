@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.universityims import UniversityIM
+from api.services.activitylog_service import ActivityLogService
 from api.models.colleges import College
 from api.models.departments import Department
 from api.models.subjects import Subject
@@ -35,6 +36,16 @@ class UniversityIMService:
         except IntegrityError as e:
             db.session.rollback()
             raise ValueError("Database integrity error") from e
+        
+        if data.get('user_id'):
+            ActivityLogService.log_activity(
+                user_id=data['user_id'],
+                action="CREATE",
+                table_name="universityims",
+                description=f"Created university IM {new_universityim.id}",
+                record_id=new_universityim.id,
+                new_values={"subject_id": new_universityim.subject_id, "year_level": new_universityim.year_level}
+            )
             
         return new_universityim
 
@@ -61,12 +72,32 @@ class UniversityIMService:
             return None
         
         try:
+            # Capture old values before update
+            old_values = {
+                "college_id": universityim.college_id,
+                "department_id": universityim.department_id,
+                "subject_id": universityim.subject_id,
+                "year_level": universityim.year_level
+            }
+            
             # Update only the provided fields
             for key, value in data.items():
                 if hasattr(universityim, key):
                     setattr(universityim, key, value)
             
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="universityims",
+                    description=f"Updated university IM {universityim_id}",
+                    record_id=universityim_id,
+                    old_values=old_values,
+                    new_values={"college_id": universityim.college_id, "department_id": universityim.department_id, "subject_id": universityim.subject_id, "year_level": universityim.year_level}
+                )
+            
             return universityim
             
         except Exception as e:

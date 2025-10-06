@@ -15,7 +15,8 @@ class UserSchema(Schema):
     created_at = fields.DateTime(dump_only=True)  
     updated_by = fields.Str(required=True)
     updated_at = fields.DateTime(dump_only=True)  
-    is_deleted = fields.Boolean(dump_only=True) 
+    is_deleted = fields.Boolean(dump_only=True)
+    user_id = fields.Int(load_only=True) 
 
 class UserLoginSchema(Schema):
     email = fields.Str(required=True, validate=validate.Email())

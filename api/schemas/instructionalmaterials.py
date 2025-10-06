@@ -23,4 +23,5 @@ class InstructionalMaterialSchema(Schema):
     is_deleted = fields.Boolean(dump_only=True) 
 
     filename = fields.Str(load_only=True)
-    email = fields.Str(load_only=True)   
+    email = fields.Str(load_only=True)
+    user_id = fields.Int(load_only=True)   

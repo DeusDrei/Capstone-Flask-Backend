@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.departments import Department
+from api.services.activitylog_service import ActivityLogService
 
 class DepartmentService:
     @staticmethod
@@ -15,6 +16,17 @@ class DepartmentService:
         
         db.session.add(new_department)
         db.session.commit()
+        
+        if data.get('user_id'):
+            ActivityLogService.log_activity(
+                user_id=data['user_id'],
+                action="CREATE",
+                table_name="departments",
+                description=f"Created department {new_department.id}",
+                record_id=new_department.id,
+                new_values={"name": new_department.name, "abbreviation": new_department.abbreviation}
+            )
+        
         return new_department
 
     @staticmethod
@@ -40,6 +52,13 @@ class DepartmentService:
             return None
         
         try:
+            # Capture old values before update
+            old_values = {
+                "name": department.name,
+                "abbreviation": department.abbreviation,
+                "college_id": department.college_id
+            }
+            
             # Update only the provided fields
             for key, value in data.items():
                 if hasattr(department, key):  # Only update existing attributes
@@ -50,6 +69,18 @@ class DepartmentService:
                 department.updated_by = data['updated_by']
             
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="departments",
+                    description=f"Updated department {department_id}",
+                    record_id=department_id,
+                    old_values=old_values,
+                    new_values={"name": department.name, "abbreviation": department.abbreviation, "college_id": department.college_id}
+                )
+            
             return department
             
         except Exception as e:

@@ -9,3 +9,5 @@ class CollegeSchema(Schema):
     updated_by = fields.Str(required=True)
     updated_at = fields.DateTime(dump_only=True)  
     is_deleted = fields.Boolean(dump_only=True) 
+
+    user_id = fields.Int(load_only=True)

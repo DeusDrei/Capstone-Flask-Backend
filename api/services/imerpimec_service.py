@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.imerpimec import IMERPIMEC
+from api.services.activitylog_service import ActivityLogService
 
 class IMERPIMECService:
     @staticmethod
@@ -31,6 +32,17 @@ class IMERPIMECService:
         
         db.session.add(new_imerpimec)
         db.session.commit()
+        
+        if data.get('user_id'):
+            ActivityLogService.log_activity(
+                user_id=data['user_id'],
+                action="CREATE",
+                table_name="imerpimec",
+                description=f"Created IMERPIMEC {new_imerpimec.id}",
+                record_id=new_imerpimec.id,
+                new_values={"total": new_imerpimec.total}
+            )
+        
         return new_imerpimec
 
     @staticmethod
@@ -56,6 +68,16 @@ class IMERPIMECService:
             return None
         
         try:
+            # Capture old values before update
+            old_values = {
+                "total": imerpimec.total,
+                "a_subtotal": imerpimec.a_subtotal,
+                "b_subtotal": imerpimec.b_subtotal,
+                "c_subtotal": imerpimec.c_subtotal,
+                "d_subtotal": imerpimec.d_subtotal,
+                "e_subtotal": imerpimec.e_subtotal
+            }
+            
             # Update individual fields
             for key, value in data.items():
                 if hasattr(imerpimec, key) and key not in ['a_subtotal', 'b_subtotal', 'c_subtotal', 'd_subtotal', 'e_subtotal', 'total']:
@@ -70,6 +92,18 @@ class IMERPIMECService:
             imerpimec.total = imerpimec.a_subtotal + imerpimec.b_subtotal + imerpimec.c_subtotal + imerpimec.d_subtotal + imerpimec.e_subtotal
             
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="imerpimec",
+                    description=f"Updated IMERPIMEC {imerpimec_id}",
+                    record_id=imerpimec_id,
+                    old_values=old_values,
+                    new_values={"total": imerpimec.total, "a_subtotal": imerpimec.a_subtotal, "b_subtotal": imerpimec.b_subtotal, "c_subtotal": imerpimec.c_subtotal, "d_subtotal": imerpimec.d_subtotal, "e_subtotal": imerpimec.e_subtotal}
+                )
+            
             return imerpimec
             
         except Exception as e:

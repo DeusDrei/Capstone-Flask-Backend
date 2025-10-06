@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.users import User
+from api.services.activitylog_service import ActivityLogService
 from api.models.collegesincluded import CollegeIncluded
 from api.models.colleges import College
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -33,6 +34,17 @@ class UserService:
         
         db.session.add(new_user)
         db.session.commit()
+        
+        if data.get('user_id'):
+            ActivityLogService.log_activity(
+                user_id=data['user_id'],
+                action="CREATE",
+                table_name="users",
+                description=f"Created user {new_user.id}",
+                record_id=new_user.id,
+                new_values={"email": new_user.email, "role": new_user.role}
+            )
+        
         return new_user
 
     @staticmethod
@@ -143,6 +155,14 @@ class UserService:
             return None
         
         try:
+            # Capture old values before update
+            old_values = {
+                "email": user.email,
+                "role": user.role,
+                "first_name": user.first_name,
+                "last_name": user.last_name
+            }
+            
             # Validate role if provided in update
             if 'role' in data:
                 if data['role'] not in VALID_ROLES:
@@ -160,6 +180,18 @@ class UserService:
                     setattr(user, key, value)
             
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="users",
+                    description=f"Updated user {user_id}",
+                    record_id=user_id,
+                    old_values=old_values,
+                    new_values={"email": user.email, "role": user.role, "first_name": user.first_name, "last_name": user.last_name}
+                )
+            
             return user
             
         except ValueError as e:

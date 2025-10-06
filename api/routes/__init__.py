@@ -11,4 +11,5 @@ from .author import *
 from .subject_department import *
 from .imerpimec import *
 from .departmentincluded import *
+from .activitylog import *
 from .requirements import *

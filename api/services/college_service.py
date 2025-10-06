@@ -1,5 +1,6 @@
 from api.extensions import db
 from api.models.colleges import College
+from api.services.activitylog_service import ActivityLogService
 
 class CollegeService:
     @staticmethod
@@ -14,6 +15,17 @@ class CollegeService:
         
         db.session.add(new_college)
         db.session.commit()
+        
+        if data.get('user_id'):
+            ActivityLogService.log_activity(
+                user_id=data['user_id'],
+                action="CREATE",
+                table_name="colleges",
+                description=f"Created college {new_college.id}",
+                record_id=new_college.id,
+                new_values={"name": new_college.name, "abbreviation": new_college.abbreviation}
+            )
+        
         return new_college
 
     @staticmethod
@@ -45,6 +57,12 @@ class CollegeService:
             return None
         
         try:
+            # Capture old values before update
+            old_values = {
+                "name": college.name,
+                "abbreviation": college.abbreviation
+            }
+            
             # Update only the provided fields
             for key, value in data.items():
                 if hasattr(college, key):  # Only update existing attributes
@@ -55,6 +73,18 @@ class CollegeService:
                 college.updated_by = data['updated_by']
             
             db.session.commit()
+            
+            if data.get('user_id'):
+                ActivityLogService.log_activity(
+                    user_id=data['user_id'],
+                    action="UPDATE",
+                    table_name="colleges",
+                    description=f"Updated college {college_id}",
+                    record_id=college_id,
+                    old_values=old_values,
+                    new_values={"name": college.name, "abbreviation": college.abbreviation}
+                )
+            
             return college
             
         except Exception as e:
