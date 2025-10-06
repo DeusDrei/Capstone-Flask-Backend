@@ -25,8 +25,9 @@ def seed_instructionalmaterials():
             "created_by": admin_user,
             "updated_by": admin_user,
             "notes": "Missing sections: The VMGOP, Preface",
-            "university_im_id": 16,
-            "service_im_id": 16,
+            "university_im_id": 1,
+            "service_im_id": 1,
+            "assigned_by": 7,
             # counters consistent with status "For Resubmission" (ai_attempt incremented)
             "published": 0,
             "utldo_attempt": 0,

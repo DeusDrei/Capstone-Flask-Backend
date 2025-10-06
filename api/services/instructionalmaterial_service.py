@@ -228,6 +228,7 @@ class InstructionalMaterialService:
                 university_im_id=data.get('university_im_id'),
                 service_im_id=data.get('service_im_id'),
                 imerpimec_id=data.get('imerpimec_id'),
+                assigned_by=data.get('assigned_by'),
                 published=counters['published'],
                 utldo_attempt=counters['utldo_attempt'],
                 pimec_attempt=counters['pimec_attempt'],

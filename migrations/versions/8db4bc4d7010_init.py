@@ -1,8 +1,8 @@
 """init
 
-Revision ID: efe71b7d7dc2
+Revision ID: 8db4bc4d7010
 Revises: 
-Create Date: 2025-09-23 10:23:43.289951
+Create Date: 2025-10-06 10:02:14.280085
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'efe71b7d7dc2'
+revision = '8db4bc4d7010'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -108,6 +108,13 @@ def upgrade():
     sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('departmentsincluded',
+    sa.Column('department_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['department_id'], ['departments.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('department_id', 'user_id')
+    )
     op.create_table('subject_departments',
     sa.Column('subject_id', sa.Integer(), nullable=False),
     sa.Column('department_id', sa.Integer(), nullable=False),
@@ -132,6 +139,7 @@ def upgrade():
     sa.Column('university_im_id', sa.Integer(), nullable=True),
     sa.Column('service_im_id', sa.Integer(), nullable=True),
     sa.Column('imerpimec_id', sa.Integer(), nullable=True),
+    sa.Column('assigned_by', sa.Integer(), nullable=True),
     sa.Column('status', sa.String(), nullable=False),
     sa.Column('validity', sa.String(), nullable=False),
     sa.Column('version', sa.String(), nullable=False),
@@ -146,6 +154,7 @@ def upgrade():
     sa.Column('updated_by', sa.String(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('is_deleted', sa.Boolean(), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_by'], ['users.id'], ),
     sa.ForeignKeyConstraint(['imerpimec_id'], ['imerpimec.id'], ),
     sa.ForeignKeyConstraint(['service_im_id'], ['serviceims.id'], ),
     sa.ForeignKeyConstraint(['university_im_id'], ['universityims.id'], ),
@@ -167,6 +176,7 @@ def downgrade():
     op.drop_table('instructionalmaterials')
     op.drop_table('universityims')
     op.drop_table('subject_departments')
+    op.drop_table('departmentsincluded')
     op.drop_table('serviceims')
     op.drop_table('departments')
     op.drop_table('collegesincluded')

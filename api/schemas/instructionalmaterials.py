@@ -6,6 +6,7 @@ class InstructionalMaterialSchema(Schema):
     university_im_id = fields.Int(required=False)
     service_im_id = fields.Int(required=False)
     imerpimec_id = fields.Int(required=False)
+    assigned_by = fields.Int(required=False)
     status = fields.Str(required=True)
     validity = fields.Str(required=True)
     version = fields.Str(dump_only=True)
