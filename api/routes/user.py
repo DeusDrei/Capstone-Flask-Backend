@@ -22,7 +22,7 @@ def create_user():
         if "users.email" in str(e.orig):
             return jsonify({"message": "User with this email already exists"}), 409
         if "users.staff_id" in str(e.orig):
-            return jsonify({"message": "User with this faculty ID already exists"}), 409
+            return jsonify({"message": "User with this staff ID already exists"}), 409
         return jsonify({'error': 'Database integrity error'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -124,3 +124,16 @@ def restore_user(user_id):
     if not success:
         return jsonify({'error': 'User not found or already active'}), 404
     return jsonify({'message': 'User restored successfully'}), 200
+
+@user_blueprint.route('/change-password', methods=['POST'])
+@jwt_required
+def change_password():
+    data = request.json
+    result = UserService.change_password(data['user_id'], data['old_password'], data['new_password'])
+    
+    if result is None:
+        return jsonify({'error': 'User not found'}), 404
+    if result is False:
+        return jsonify({'error': 'Invalid old password'}), 400
+    
+    return jsonify({'message': 'Password changed successfully'}), 200

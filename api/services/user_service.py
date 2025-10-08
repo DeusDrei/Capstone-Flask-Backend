@@ -232,3 +232,17 @@ class UserService:
         user.is_deleted = False
         db.session.commit()
         return True
+
+    @staticmethod
+    def change_password(user_id, old_password, new_password):
+        """Change user password after validating old password"""
+        user = User.query.filter_by(id=user_id, is_deleted=False).first()
+        if not user:
+            return None
+        
+        if not check_password_hash(user.password, old_password):
+            return False
+        
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        return True
