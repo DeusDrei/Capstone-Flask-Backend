@@ -2,6 +2,7 @@ from flask import request, jsonify
 from flask import send_file, redirect
 from flask_smorest import Blueprint
 from api.services.instructionalmaterial_service import InstructionalMaterialService
+import boto3
 from api.schemas.instructionalmaterials import InstructionalMaterialSchema
 from sqlalchemy.exc import IntegrityError
 from api.middleware import jwt_required, roles_required
@@ -267,33 +268,52 @@ def get_presigned_pdf_url(im_id):
 @im_blueprint.route('/cert-of-appreciation', methods=['GET'])
 @jwt_required
 def get_cert_of_appreciation():
-    """Return a presigned URL or redirect to a certificate (recommendation/thank-you) PDF stored in S3.
-    Query params:
-      - s3_link (optional): full s3 key or s3://... link. If omitted, falls back to
-        'requirements/recommendation-letter.pdf' in the configured bucket.
+    """Download the certificate DOCX template from S3.
+    This endpoint downloads the template file stored at 
+    'requirements/cert-of-appreciation.docx' in the configured S3 bucket
+    and returns it as a file download.
     """
     try:
-        s3_link = request.args.get('s3_link')
-        # default key if not provided
-        default_key = 'requirements/recommendation-letter.pdf'
-        if not s3_link:
-            object_key = default_key
-        else:
-            # accept s3://bucket/key or plain key
-            if s3_link.startswith('s3://'):
-                # strip bucket if provided
-                parts = s3_link[5:].split('/', 1)
-                if len(parts) == 2:
-                    object_key = parts[1]
-                else:
-                    object_key = default_key
-            else:
-                object_key = s3_link
-
-        # generate presigned URL
-        url = InstructionalMaterialService.generate_presigned_url(object_key, expires_in=900)
-        # redirect so browser loads the PDF directly
-        return redirect(url, code=302)
+        object_key = 'requirements/cert-of-appreciation.docx'
+        bucket_name = os.getenv('AWS_BUCKET_NAME')
+        
+        if not bucket_name:
+            return jsonify({'error': 'AWS_BUCKET_NAME not configured'}), 500
+        
+        # Download file from S3 to a temporary location
+        s3 = boto3.client('s3')
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
+        temp_file_path = temp_file.name
+        temp_file.close()
+        
+        try:
+            s3.download_file(bucket_name, object_key, temp_file_path)
+            
+            # Send the file to the client
+            response = send_file(
+                temp_file_path,
+                as_attachment=True,
+                download_name='cert-of-appreciation.docx',
+                mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+            
+            # Schedule file deletion after sending
+            @response.call_on_close
+            def cleanup():
+                try:
+                    if os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
+                except:
+                    pass
+            
+            return response
+            
+        except Exception as download_error:
+            # Clean up temp file on error
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            raise download_error
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
