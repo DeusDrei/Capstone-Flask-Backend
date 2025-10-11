@@ -262,6 +262,146 @@ def get_presigned_pdf_url(im_id):
         return jsonify({'url': url})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@im_blueprint.route('/cert-of-appreciation', methods=['GET'])
+@jwt_required
+def get_cert_of_appreciation():
+    """Return a presigned URL or redirect to a certificate (recommendation/thank-you) PDF stored in S3.
+    Query params:
+      - s3_link (optional): full s3 key or s3://... link. If omitted, falls back to
+        'requirements/recommendation-letter.pdf' in the configured bucket.
+    """
+    try:
+        s3_link = request.args.get('s3_link')
+        # default key if not provided
+        default_key = 'requirements/recommendation-letter.pdf'
+        if not s3_link:
+            object_key = default_key
+        else:
+            # accept s3://bucket/key or plain key
+            if s3_link.startswith('s3://'):
+                # strip bucket if provided
+                parts = s3_link[5:].split('/', 1)
+                if len(parts) == 2:
+                    object_key = parts[1]
+                else:
+                    object_key = default_key
+            else:
+                object_key = s3_link
+
+        # generate presigned URL
+        url = InstructionalMaterialService.generate_presigned_url(object_key, expires_in=900)
+        # redirect so browser loads the PDF directly
+        return redirect(url, code=302)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@im_blueprint.route('/send-certs-of-appreciation/<int:im_id>', methods=['POST'])
+@jwt_required
+def send_certs_of_appreciation(im_id):
+    """Accept a file upload and recipients, then email the attachment to multiple recipients.
+    Expects multipart/form-data with fields:
+      - file: the uploaded file
+      - recipients: comma-separated emails OR multiple recipients fields
+      - subject (optional)
+      - text_body / html_body (optional)
+    """
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'file is required'}), 400
+        uploaded = request.files['file']
+        if uploaded.filename == '':
+            return jsonify({'error': 'file is required'}), 400
+
+        # get optional fields
+        subject = request.form.get('subject')
+        text_body = request.form.get('text_body')
+        html_body = request.form.get('html_body')
+
+        # read bytes
+        file_bytes = uploaded.read()
+        filename = uploaded.filename
+
+        # fetch IM and derive recipients from its authors
+        recipients = []
+        im = InstructionalMaterialService.get_instructional_material_by_id(im_id)
+        if not im:
+            return jsonify({'error': f'Instructional Material with id {im_id} not found'}), 404
+
+        # im.authors is a relationship of Author objects -> .user -> .email
+        for author_rel in getattr(im, 'authors', []) or []:
+            user = getattr(author_rel, 'user', None)
+            if user and getattr(user, 'email', None):
+                recipients.append(user.email)
+
+        if not recipients:
+            return jsonify({'error': 'No author emails found for the specified instructional material'}), 400
+
+        # Prepare a formal email body if none provided, using author names
+        # build author display names
+        author_names = []
+        for author_rel in getattr(im, 'authors', []) or []:
+            user = getattr(author_rel, 'user', None)
+            if not user:
+                continue
+            parts = [getattr(user, 'first_name', '') or '']
+            middle = getattr(user, 'middle_name', None)
+            if middle:
+                parts.append(middle)
+            parts.append(getattr(user, 'last_name', '') or '')
+            full_name = ' '.join([p for p in parts if p and p.strip()])
+            author_names.append(full_name)
+
+        # default subject
+        if not subject:
+            subject = f"Certificate of Appreciation — Instructional Materials"
+
+        # If the client didn't supply html_body/text_body, construct polite/formal templates
+        if not html_body:
+            authors_html = '<br>'.join([f"<strong>{name}</strong>" for name in author_names]) if author_names else ''
+            html_body = f"""
+            <html>
+            <body style=\"font-family: Arial, sans-serif; color: #222; line-height:1.4;\">
+              <h2 style=\"color:#0b3255;\">Certificate of Appreciation</h2>
+              <p>Congratulations.</p>
+              <p>This certificate is presented in recognition of the exemplary services and significant contributions made
+                 in the preparation and development of instructional materials.</p>
+              <p><strong>Awarded to:</strong><br>
+              {authors_html}
+              </p>
+              <p>We sincerely thank the above individuals for their dedication and commitment to quality teaching and learning.
+                 Their efforts have been instrumental in ensuring high standards in our instructional resources.</p>
+              <br>
+              <p>With appreciation,<br>
+                 The Instructional Materials Committee</p>
+            </body>
+            </html>
+            """
+
+        if not text_body:
+            authors_text = ', '.join(author_names) if author_names else ''
+            text_body = (
+                f"Certificate of Appreciation\n\n"
+                f"Congratulations.\n\n"
+                f"This certificate is presented in recognition of the contributions made in the preparation and development of instructional materials.\n\n"
+                f"Awarded to:\n{authors_text}\n\n"
+                f"We sincerely thank the above individuals for their dedication and commitment to quality teaching and learning.\n\n"
+                f"With appreciation,\nThe Instructional Materials Committee"
+            )
+
+        # call EmailService helper directly
+        from api.services.email_service import EmailService
+        sent = EmailService.send_file_to_recipients(recipients, file_bytes, filename, subject=subject, html_body=html_body, text_body=text_body)
+
+        if sent:
+            return jsonify({'success': True, 'recipients': recipients}), 200
+        else:
+            return jsonify({'error': 'Failed to send email to recipients'}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     
 @im_blueprint.route('/get-for-pimec', methods=['GET'])
 @jwt_required
