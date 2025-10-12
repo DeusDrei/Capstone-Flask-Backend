@@ -32,7 +32,7 @@ def create_serviceim():
 
 @serviceim_blueprint.route('/<int:serviceim_id>', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def get_serviceim(serviceim_id):
     serviceim = ServiceIMService.get_serviceim_by_id(serviceim_id)
     if not serviceim:
@@ -43,7 +43,7 @@ def get_serviceim(serviceim_id):
 
 @serviceim_blueprint.route('/', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def get_all_serviceims():
     page = request.args.get('page', 1, type=int)
     if page < 1:
@@ -97,7 +97,7 @@ def delete_serviceim(serviceim_id):
 
 @serviceim_blueprint.route('/college/<int:college_id>', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def get_serviceims_by_college(college_id):
     page = request.args.get('page', 1, type=int)
     if page < 1:
@@ -116,7 +116,7 @@ def get_serviceims_by_college(college_id):
 
 @serviceim_blueprint.route('/subject/<int:subject_id>', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def get_serviceims_by_subject(subject_id):
     page = request.args.get('page', 1, type=int)
     if page < 1:

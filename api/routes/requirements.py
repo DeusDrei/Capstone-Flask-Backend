@@ -8,7 +8,7 @@ requirements_blueprint = Blueprint('requirements', __name__, url_prefix="/requir
 
 @requirements_blueprint.route('/recommendation-letter/download', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def download_recommendation_letter():
     """
     Download the recommendation letter PDF from S3
@@ -44,7 +44,7 @@ def download_recommendation_letter():
 
 @requirements_blueprint.route('/recommendation-letter/view', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def view_recommendation_letter():
     """
     Get a presigned URL for viewing the recommendation letter PDF inline
@@ -64,7 +64,7 @@ def view_recommendation_letter():
 
 @requirements_blueprint.route('/recommendation-letter/redirect', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def redirect_to_recommendation_letter():
     """
     Redirect directly to the recommendation letter PDF
@@ -79,7 +79,7 @@ def redirect_to_recommendation_letter():
 
 @requirements_blueprint.route('/recommendation-letter/check', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def check_recommendation_letter():
     """
     Check if the recommendation letter PDF exists in S3
@@ -99,7 +99,7 @@ def check_recommendation_letter():
 
 @requirements_blueprint.route('/recommendation-letter/info', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
+
 def get_recommendation_letter_info():
     """
     Get information about available endpoints for the recommendation letter

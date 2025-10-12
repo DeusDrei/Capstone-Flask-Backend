@@ -492,12 +492,23 @@ class InstructionalMaterialService:
     @staticmethod
     def get_instructional_materials_for_pimec(page=1):
         """
-        Get instructional materials with status 'For PIMEC Evaluation'
+        Get instructional materials for PIMEC - includes:
+        - Assigned to Faculty (PIMEC assigned, waiting for faculty upload)
+        - For PIMEC Evaluation (ready for evaluation)
+        - For UTLDO Evaluation (in progress, PIMEC can still view)
         """
         per_page = 10
-        return InstructionalMaterial.query.filter_by(
-            status='For PIMEC Evaluation', 
-            is_deleted=False
+        return InstructionalMaterial.query.filter(
+            InstructionalMaterial.status.in_([
+                'Assigned to Faculty',
+                'For PIMEC Evaluation',
+                'For UTLDO Evaluation',
+                'For Certification',
+                'Certified'
+            ]),
+            InstructionalMaterial.is_deleted == False
+        ).order_by(
+            InstructionalMaterial.updated_at.desc()
         ).paginate(
             page=page, 
             per_page=per_page, 
@@ -507,12 +518,21 @@ class InstructionalMaterialService:
     @staticmethod
     def get_instructional_materials_for_utldo(page=1):
         """
-        Get instructional materials with status 'For UTLDO Evaluation'
+        Get instructional materials for UTLDO - includes:
+        - For UTLDO Evaluation (ready for UTLDO evaluation)
+        - For Certification (in progress)
+        - Certified (completed)
         """
         per_page = 10
-        return InstructionalMaterial.query.filter_by(
-            status='For UTLDO Evaluation', 
-            is_deleted=False
+        return InstructionalMaterial.query.filter(
+            InstructionalMaterial.status.in_([
+                'For UTLDO Evaluation',
+                'For Certification',
+                'Certified'
+            ]),
+            InstructionalMaterial.is_deleted == False
+        ).order_by(
+            InstructionalMaterial.updated_at.desc()
         ).paginate(
             page=page, 
             per_page=per_page, 
@@ -522,14 +542,21 @@ class InstructionalMaterialService:
     @staticmethod
     def get_instructional_materials_for_certification(page=1):
         """
-        Get instructional materials with status 'For Certification'
+        Get instructional materials for certification - includes:
+        - For Certification (ready for certification)
+        - Certified (already certified, for reference)
         """
         per_page = 10
-        return InstructionalMaterial.query.filter_by(
-            status='For Certification',
-            is_deleted=False
+        return InstructionalMaterial.query.filter(
+            InstructionalMaterial.status.in_([
+                'For Certification',
+                'Certified'
+            ]),
+            InstructionalMaterial.is_deleted == False
+        ).order_by(
+            InstructionalMaterial.updated_at.desc()
         ).paginate(
-            page=page,
-            per_page=per_page,
+            page=page, 
+            per_page=per_page, 
             error_out=False
         )

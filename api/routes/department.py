@@ -31,6 +31,7 @@ def create_department():
 
 @department_blueprint.route('/<int:department_id>', methods=['GET'])
 @jwt_required
+
 def get_department(department_id):
     department = DepartmentService.get_department_by_id(department_id)
     if not department or department.is_deleted:
@@ -41,6 +42,7 @@ def get_department(department_id):
 
 @department_blueprint.route('/', methods=['GET'])
 @jwt_required
+
 def get_all_departments():
     try:
         departments = DepartmentService.get_all_departments()
@@ -51,6 +53,7 @@ def get_all_departments():
 
 @department_blueprint.route('/college/<int:college_id>', methods=['GET'])
 @jwt_required
+
 def get_departments_by_college_id(college_id):
     try:
         departments = DepartmentService.get_departments_by_college_id(college_id)
@@ -61,7 +64,7 @@ def get_departments_by_college_id(college_id):
 
 @department_blueprint.route('/<int:department_id>', methods=['PUT'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def update_department(department_id):
     department_schema = DepartmentSchema(partial=True)
 
@@ -78,7 +81,7 @@ def update_department(department_id):
 
 @department_blueprint.route('/<int:department_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def delete_department(department_id):
     success = DepartmentService.soft_delete_department(department_id)
     if not success:
@@ -88,7 +91,7 @@ def delete_department(department_id):
 
 @department_blueprint.route('/deleted', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_deleted_departments():
     page = request.args.get('page', 1, type=int)
     paginated_departments = DepartmentService.get_deleted_departments(page=page)
@@ -103,7 +106,7 @@ def get_deleted_departments():
 
 @department_blueprint.route('/<int:department_id>/restore', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def restore_department(department_id):
     success = DepartmentService.restore_department(department_id)
     if not success:

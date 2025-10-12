@@ -31,6 +31,7 @@ def create_subject():
 
 @subject_blueprint.route('/<int:subject_id>', methods=['GET'])
 @jwt_required
+
 def get_subject(subject_id):
     subject = SubjectService.get_subject_by_id(subject_id)
     if not subject or subject.is_deleted:
@@ -56,6 +57,7 @@ def get_all_subjects():
 
 @subject_blueprint.route('/all', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'UTLDO Admin', 'Technical Admin', 'PIMEC')
 def get_all_subjects_no_pagination():
     try:
         subjects = SubjectService.get_all_subjects_no_pagination()
@@ -66,7 +68,7 @@ def get_all_subjects_no_pagination():
 
 @subject_blueprint.route('/<int:subject_id>', methods=['PUT'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def update_subject(subject_id):
     subject_schema = SubjectSchema(partial=True)
 
@@ -83,7 +85,7 @@ def update_subject(subject_id):
 
 @subject_blueprint.route('/<int:subject_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def delete_subject(subject_id):
     success = SubjectService.soft_delete_subject(subject_id)
     if not success:
@@ -93,7 +95,7 @@ def delete_subject(subject_id):
 
 @subject_blueprint.route('/deleted', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_deleted_subjects():
     page = request.args.get('page', 1, type=int)
     paginated_subjects = SubjectService.get_deleted_subjects(page=page)
@@ -109,7 +111,7 @@ def get_deleted_subjects():
 
 @subject_blueprint.route('/<int:subject_id>/restore', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def restore_subject(subject_id):
     success = SubjectService.restore_subject(subject_id)
     if not success:
@@ -119,6 +121,7 @@ def restore_subject(subject_id):
 
 @subject_blueprint.route('/college/<int:college_id>', methods=['GET'])
 @jwt_required
+
 def get_subjects_by_college(college_id):
     try:
         subjects = SubjectService.get_subjects_by_college_id(college_id)

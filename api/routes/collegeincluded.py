@@ -9,7 +9,7 @@ collegeincluded_blueprint = Blueprint('college_included', __name__, url_prefix="
 
 @collegeincluded_blueprint.route('/', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def create_association():
     schema = CollegeIncludedSchema()
     try:
@@ -34,7 +34,7 @@ def create_association():
 
 @collegeincluded_blueprint.route('/college/<int:college_id>/user/<int:user_id>', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_association(college_id, user_id):
     association = CollegeIncludedService.get_association(college_id, user_id)
     if not association:
@@ -45,6 +45,7 @@ def get_association(college_id, user_id):
 
 @collegeincluded_blueprint.route('/user/<int:user_id>', methods=['GET'])
 @jwt_required
+
 def get_colleges_for_user(user_id):
     associations = CollegeIncludedService.get_colleges_for_user(user_id)
     schema = CollegeIncludedSchema(many=True)
@@ -61,7 +62,7 @@ def get_users_for_college(college_id):
 
 @collegeincluded_blueprint.route('/college/<int:college_id>/user/<int:user_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def delete_association(college_id, user_id):
     success = CollegeIncludedService.delete_association(college_id, user_id)
     if not success:

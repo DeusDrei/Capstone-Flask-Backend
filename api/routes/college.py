@@ -31,6 +31,7 @@ def create_college():
 
 @college_blueprint.route('/<int:college_id>', methods=['GET'])
 @jwt_required
+
 def get_college(college_id):
     college = CollegeService.get_college_by_id(college_id)
     if not college or college.is_deleted:
@@ -41,6 +42,7 @@ def get_college(college_id):
 
 @college_blueprint.route('/all', methods=['GET'])
 @jwt_required
+
 def get_all_colleges():
     colleges = CollegeService.get_all_colleges()
     college_schema = CollegeSchema(many=True)
@@ -48,6 +50,7 @@ def get_all_colleges():
 
 @college_blueprint.route('/', methods=['GET'])
 @jwt_required
+
 def get_all_colleges_paginated():
     page = request.args.get('page', 1, type=int)
     paginated_colleges = CollegeService.get_all_colleges_paginated(page=page)
@@ -62,7 +65,7 @@ def get_all_colleges_paginated():
 
 @college_blueprint.route('/<int:college_id>', methods=['PUT'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def update_college(college_id):
     college_schema = CollegeSchema(partial=True)
 
@@ -79,7 +82,7 @@ def update_college(college_id):
 
 @college_blueprint.route('/<int:college_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def delete_college(college_id):
     success = CollegeService.soft_delete_college(college_id)
     if not success:
@@ -89,7 +92,7 @@ def delete_college(college_id):
 
 @college_blueprint.route('/deleted', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_deleted_colleges():
     page = request.args.get('page', 1, type=int)
     paginated_colleges = CollegeService.get_deleted_colleges(page=page)
@@ -105,7 +108,7 @@ def get_deleted_colleges():
 
 @college_blueprint.route('/<int:college_id>/restore', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def restore_college(college_id):
     success = CollegeService.restore_college(college_id)
     if not success:

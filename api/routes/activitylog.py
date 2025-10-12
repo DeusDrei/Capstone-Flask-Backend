@@ -12,7 +12,6 @@ activitylog_blueprint = Blueprint('activity_log', __name__, url_prefix="/activit
 def get_all_logs():
     page = request.args.get('page', 1, type=int)
     paginated_logs = ActivityLogService.get_all_logs(page=page)
-    
     log_schema = ActivityLogSchema(many=True)
     return jsonify({
         'logs': log_schema.dump(paginated_logs.items),
@@ -24,7 +23,7 @@ def get_all_logs():
 
 @activitylog_blueprint.route('/<int:log_id>', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_log(log_id):
     log = ActivityLogService.get_log_by_id(log_id)
     if not log:
@@ -35,7 +34,7 @@ def get_log(log_id):
 
 @activitylog_blueprint.route('/user/<int:user_id>', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_logs_by_user(user_id):
     page = request.args.get('page', 1, type=int)
     paginated_logs = ActivityLogService.get_logs_by_user(user_id, page=page)
@@ -51,7 +50,7 @@ def get_logs_by_user(user_id):
 
 @activitylog_blueprint.route('/table/<string:table_name>', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_logs_by_table(table_name):
     page = request.args.get('page', 1, type=int)
     paginated_logs = ActivityLogService.get_logs_by_table(table_name, page=page)

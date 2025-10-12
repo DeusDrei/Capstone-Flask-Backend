@@ -9,7 +9,6 @@ author_blueprint = Blueprint('authors', __name__, url_prefix="/authors")
 
 @author_blueprint.route('/', methods=['POST'])
 @jwt_required
-@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def create_author():
     schema = AuthorSchema()
     try:
@@ -34,18 +33,15 @@ def create_author():
 
 @author_blueprint.route('/im/<int:im_id>/user/<int:user_id>', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_author(im_id, user_id):
     author = AuthorService.get_author(im_id, user_id)
     if not author:
         return jsonify({'error': 'Author association not found'}), 404
-
     schema = AuthorSchema()
     return jsonify(schema.dump(author)), 200
 
 @author_blueprint.route('/user/<int:user_id>', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_instructional_materials_for_user(user_id):
     authors = AuthorService.get_instructional_materials_for_user(user_id)
     schema = AuthorSchema(many=True)
@@ -53,7 +49,6 @@ def get_instructional_materials_for_user(user_id):
 
 @author_blueprint.route('/im/<int:im_id>', methods=['GET'])
 @jwt_required
-@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_authors_for_instructional_material(im_id):
     authors = AuthorService.get_authors_for_instructional_material(im_id)
     schema = AuthorSchema(many=True)
@@ -61,7 +56,6 @@ def get_authors_for_instructional_material(im_id):
 
 @author_blueprint.route('/im/<int:im_id>/user/<int:user_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def delete_author(im_id, user_id):
     success = AuthorService.delete_author(im_id, user_id)
     if not success:

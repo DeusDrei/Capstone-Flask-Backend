@@ -45,7 +45,7 @@ def get_user(user_id):
 
 @user_blueprint.route('/', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_all_users():
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', type=str)
@@ -103,7 +103,7 @@ def delete_user(user_id):
 
 @user_blueprint.route('/deleted', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def get_deleted_users():
     page = request.args.get('page', 1, type=int)
     paginated_users = UserService.get_deleted_users(page=page)
@@ -119,7 +119,7 @@ def get_deleted_users():
 
 @user_blueprint.route('/<int:user_id>/restore', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC')
 def restore_user(user_id):
     success = UserService.restore_user(user_id)
     if not success:
