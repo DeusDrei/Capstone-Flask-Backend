@@ -35,6 +35,7 @@ def create_user():
 @user_blueprint.route('/<int:user_id>', methods=['GET'])
 @jwt_required
 def get_user(user_id):
+    """Get user by ID - accessible to all authenticated users for author lookup"""
     user = UserService.get_user_by_id(user_id)
     if not user or user.is_deleted:
         return jsonify({'error': 'User not found'}), 404
@@ -66,7 +67,7 @@ def get_all_users():
 
 @user_blueprint.route('/all', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def get_all_users_no_pagination():
     sort_by = request.args.get('sort_by', type=str)
     sort_dir = request.args.get('sort_dir', 'asc', type=str)

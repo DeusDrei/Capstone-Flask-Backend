@@ -9,7 +9,7 @@ subject_blueprint = Blueprint('subjects', __name__, url_prefix="/subjects")
 
 @subject_blueprint.route('/', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def create_subject():
     try:
         data = SubjectSchema().load(request.json)

@@ -52,8 +52,9 @@ def get_colleges_for_user(user_id):
 
 @collegeincluded_blueprint.route('/college/<int:college_id>', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def get_users_for_college(college_id):
+    """Get users associated with a college - needed for author selection"""
     associations = CollegeIncludedService.get_users_for_college(college_id)
     schema = CollegeIncludedSchema(many=True)
     return jsonify(schema.dump(associations)), 200

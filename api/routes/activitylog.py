@@ -8,7 +8,7 @@ activitylog_blueprint = Blueprint('activity_log', __name__, url_prefix="/activit
 
 @activitylog_blueprint.route('/', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def get_all_logs():
     page = request.args.get('page', 1, type=int)
     paginated_logs = ActivityLogService.get_all_logs(page=page)

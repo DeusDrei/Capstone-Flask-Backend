@@ -215,7 +215,7 @@ def check_missing_sections():
 
 @im_blueprint.route('/<int:im_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def delete_instructional_material(im_id):
     success = InstructionalMaterialService.soft_delete_instructional_material(im_id)
     if not success:
@@ -225,7 +225,7 @@ def delete_instructional_material(im_id):
 
 @im_blueprint.route('/deleted', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def get_deleted_instructional_materials():
     page = request.args.get('page', 1, type=int)
     paginated_ims = InstructionalMaterialService.get_deleted_instructional_materials(page=page)
@@ -242,7 +242,7 @@ def get_deleted_instructional_materials():
 
 @im_blueprint.route('/<int:im_id>/restore', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def restore_instructional_material(im_id):
     success = InstructionalMaterialService.restore_instructional_material(im_id)
     if not success:
@@ -485,7 +485,7 @@ def get_instructional_material_for_pimec():
 
 @im_blueprint.route('/get-for-utldo', methods=['GET'])
 @jwt_required
-@roles_required('UTLDO Admin', 'Technical Admin')
+@roles_required('UTLDO Admin', 'Technical Admin', 'PIMEC')
 def get_instructional_material_for_utldo():
     """
     Get instructional materials with status 'For UTLDO Evaluation'
@@ -509,7 +509,7 @@ def get_instructional_material_for_utldo():
     
 @im_blueprint.route('/get-for-certification', methods=['GET'])
 @jwt_required
-@roles_required('UTLDO Admin', 'Technical Admin')
+@roles_required('UTLDO Admin', 'Technical Admin', 'PIMEC')
 def get_instructional_materials_for_certification():
     """
     Get instructional materials with status 'For Certification'

@@ -9,7 +9,7 @@ departmentincluded_blueprint = Blueprint('department_included', __name__, url_pr
 
 @departmentincluded_blueprint.route('/', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def create_association():
     schema = DepartmentIncludedSchema()
     try:
@@ -34,7 +34,7 @@ def create_association():
 
 @departmentincluded_blueprint.route('/department/<int:department_id>/user/<int:user_id>', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def get_association(department_id, user_id):
     association = DepartmentIncludedService.get_association(department_id, user_id)
     if not association:
@@ -52,7 +52,7 @@ def get_departments_for_user(user_id):
 
 @departmentincluded_blueprint.route('/department/<int:department_id>', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def get_users_for_department(department_id):
     associations = DepartmentIncludedService.get_users_for_department(department_id)
     schema = DepartmentIncludedSchema(many=True)
@@ -60,7 +60,7 @@ def get_users_for_department(department_id):
 
 @departmentincluded_blueprint.route('/department/<int:department_id>/user/<int:user_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def delete_association(department_id, user_id):
     success = DepartmentIncludedService.delete_association(department_id, user_id)
     if not success:

@@ -9,7 +9,7 @@ imerpimec_blueprint = Blueprint('imerpimec', __name__, url_prefix="/imerpimec")
 
 @imerpimec_blueprint.route('/', methods=['POST'])
 @jwt_required
-@roles_required('PIMEC', 'Technical Admin')
+@roles_required('PIMEC', 'Technical Admin', 'UTLDO Admin')
 def create_imerpimec():
     try:
         data = IMERPIMECSchema().load(request.json)
@@ -36,7 +36,7 @@ def get_imerpimec(imerpimec_id):
 
 @imerpimec_blueprint.route('/', methods=['GET'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def get_all_imerpimecs():
     page = request.args.get('page', 1, type=int)
     paginated_imerpimecs = IMERPIMECService.get_all_imerpimecs(page=page)
@@ -52,7 +52,7 @@ def get_all_imerpimecs():
 
 @imerpimec_blueprint.route('/<int:imerpimec_id>', methods=['PUT'])
 @jwt_required
-@roles_required('PIMEC', 'Technical Admin')
+@roles_required('PIMEC', 'Technical Admin', 'UTLDO Admin')
 def update_imerpimec(imerpimec_id):
     imerpimec_schema = IMERPIMECSchema(partial=True)
 
@@ -69,7 +69,7 @@ def update_imerpimec(imerpimec_id):
 
 @imerpimec_blueprint.route('/<int:imerpimec_id>', methods=['DELETE'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def delete_imerpimec(imerpimec_id):
     success = IMERPIMECService.soft_delete_imerpimec(imerpimec_id)
     if not success:
@@ -79,7 +79,7 @@ def delete_imerpimec(imerpimec_id):
 
 @imerpimec_blueprint.route('/<int:imerpimec_id>/restore', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def restore_imerpimec(imerpimec_id):
     success = IMERPIMECService.restore_imerpimec(imerpimec_id)
     if not success:

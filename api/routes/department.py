@@ -9,7 +9,7 @@ department_blueprint = Blueprint('departments', __name__, url_prefix="/departmen
 
 @department_blueprint.route('/', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def create_department():
     try:
         data = DepartmentSchema().load(request.json)

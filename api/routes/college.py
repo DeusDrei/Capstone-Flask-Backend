@@ -9,7 +9,7 @@ college_blueprint = Blueprint('colleges', __name__, url_prefix="/colleges")
 
 @college_blueprint.route('/', methods=['POST'])
 @jwt_required
-@roles_required('Technical Admin')
+@roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def create_college():
     try:
         data = CollegeSchema().load(request.json)
