@@ -6,11 +6,11 @@ class Department(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     college_id = db.Column(db.Integer, db.ForeignKey('colleges.id'), nullable=False)
-    abbreviation = db.Column(db.String, nullable=False, unique=True)
-    name = db.Column(db.String, nullable=False, unique=True)
-    created_by = db.Column(db.String, nullable=False)
+    abbreviation = db.Column(db.String(20), nullable=False, unique=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    created_by = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(UTC))
-    updated_by = db.Column(db.String, nullable=False)
+    updated_by = db.Column(db.String(255), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
     is_deleted = db.Column(db.Boolean, default=False)
 

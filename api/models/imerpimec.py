@@ -51,9 +51,9 @@ class IMERPIMEC(db.Model):
     # Totals
     total = db.Column(db.Integer, nullable=False)
     overall_comment = db.Column(db.Text, nullable=True)
-    created_by = db.Column(db.String, nullable=False)
+    created_by = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(UTC))
-    updated_by = db.Column(db.String, nullable=False)
+    updated_by = db.Column(db.String(255), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
     is_deleted = db.Column(db.Boolean, default=False)
 

@@ -5,23 +5,23 @@ class InstructionalMaterial(db.Model):
     __tablename__ = 'instructionalmaterials'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    im_type = db.Column(db.String, nullable=False)
+    im_type = db.Column(db.String(50), nullable=False)
     university_im_id = db.Column(db.Integer, db.ForeignKey('universityims.id'), nullable=True)
     service_im_id = db.Column(db.Integer, db.ForeignKey('serviceims.id'), nullable=True)
     imerpimec_id = db.Column(db.Integer, db.ForeignKey('imerpimec.id'), nullable=True)
     assigned_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    status = db.Column(db.String, nullable=False)
-    validity = db.Column(db.String, nullable=False)
-    version = db.Column(db.String, nullable=False)
-    s3_link = db.Column(db.String, nullable=True)  # Made nullable for assignment workflow
-    notes = db.Column(db.String, nullable=True)
+    status = db.Column(db.String(50), nullable=False)
+    validity = db.Column(db.String(50), nullable=False)
+    version = db.Column(db.String(20), nullable=False)
+    s3_link = db.Column(db.String(500), nullable=True)  # Made nullable for assignment workflow
+    notes = db.Column(db.Text, nullable=True)
     published = db.Column(db.Integer, default=0, nullable=False)
     utldo_attempt = db.Column(db.Integer, default=0, nullable=False)
     pimec_attempt = db.Column(db.Integer, default=0, nullable=False)
     ai_attempt = db.Column(db.Integer, default=0, nullable=False)
-    created_by = db.Column(db.String, nullable=False)
+    created_by = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(UTC))
-    updated_by = db.Column(db.String, nullable=False)
+    updated_by = db.Column(db.String(255), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
     is_deleted = db.Column(db.Boolean, default=False)
 
