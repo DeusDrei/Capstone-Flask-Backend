@@ -13,7 +13,7 @@ class InstructionalMaterial(db.Model):
     status = db.Column(db.String, nullable=False)
     validity = db.Column(db.String, nullable=False)
     version = db.Column(db.String, nullable=False)
-    s3_link = db.Column(db.String, nullable=False)
+    s3_link = db.Column(db.String, nullable=True)  # Made nullable for assignment workflow
     notes = db.Column(db.String, nullable=True)
     published = db.Column(db.Integer, default=0, nullable=False)
     utldo_attempt = db.Column(db.Integer, default=0, nullable=False)

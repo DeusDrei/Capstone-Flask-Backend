@@ -2,6 +2,7 @@ from flask import request, jsonify
 from flask import send_file, redirect
 from flask_smorest import Blueprint
 from api.services.instructionalmaterial_service import InstructionalMaterialService
+from api.services.email_service import EmailService
 import boto3
 from api.schemas.instructionalmaterials import InstructionalMaterialSchema
 from sqlalchemy.exc import IntegrityError
@@ -43,22 +44,57 @@ def upload_pdf():
 @jwt_required
 def create_instructional_material():
     """
-    Create instructional material using pre-uploaded PDF data
-    Expects object_key and notes in the request body
+    Create instructional material - supports both assignment (no file) and creation with file
+    For assignment workflow: PIMEC assigns IM without uploading, status set to 'Assigned to Faculty'
+    For upload workflow: includes s3_link and file data
     """
     try:
-        data = InstructionalMaterialSchema().load(request.json)
+        # Read raw JSON and extract helper fields before schema validation to
+        # avoid Marshmallow 'Unknown field' errors (author_ids is not part of schema)
+        raw = dict(request.json or {})
+        author_ids = raw.pop('author_ids', [])
+        s3_link = raw.get('s3_link', None)
+        notes = raw.get('notes', '')
+
+        # Validate remaining payload against the schema
+        data = InstructionalMaterialSchema().load(raw)
         
-        if 's3_link' not in request.json:
-            return jsonify({'error': 's3_link is required'}), 400
-
-        s3_link = request.json['s3_link']
-        notes = request.json.get('notes', '')
-
+        # If no s3_link provided, this is an assignment workflow - set status accordingly
+        is_assignment = not s3_link
+        if is_assignment:
+            data['status'] = 'Assigned to Faculty'
+            data['s3_link'] = None
+        
         im = InstructionalMaterialService.create_instructional_material(data, s3_link, notes)
 
+        # If this is an assignment, send email notification to all authors
+        if is_assignment and author_ids:
+            try:
+                # Fetch author emails
+                from api.models.users import User
+                author_emails = []
+                for author_id in author_ids:
+                    user = User.query.get(author_id)
+                    if user and user.email:
+                        author_emails.append(user.email)
+                
+                # Send notification to all authors
+                if author_emails:
+                    subject_name = "an instructional material"  # You can enhance this with actual subject name
+                    for email in author_emails:
+                        EmailService.send_instructional_material_notification(
+                            receiver_email=email,
+                            filename=f"IM-{im.id}",
+                            status="Assigned to Faculty",
+                            notes="You have been assigned to create an instructional material. Please upload the PDF file.",
+                            action="assigned"
+                        )
+            except Exception as email_error:
+                # Log email error but don't fail the request
+                print(f"Failed to send email notification: {email_error}")
+
         return jsonify({
-            'message': f'Instructional Material {im.version} created successfully',
+            'message': f'Instructional Material {im.version} {"assigned" if is_assignment else "created"} successfully',
             'id': im.id,
             'data': InstructionalMaterialSchema().dump(im)
         }), 201
