@@ -2,12 +2,13 @@ from flask import request, jsonify
 from flask_smorest import Blueprint
 from api.services.subject_department_service import SubjectDepartmentService
 from api.schemas.subject_departments import SubjectDepartmentSchema
-from api.middleware import jwt_required
+from api.middleware import jwt_required, roles_required
 
 subject_department_blueprint = Blueprint('subject_departments', __name__, url_prefix="/subject-departments")
 
 @subject_department_blueprint.route('/', methods=['POST'])
 @jwt_required
+@roles_required('Technical Admin')
 def create_subject_department():
     schema = SubjectDepartmentSchema()
     try:
@@ -32,6 +33,7 @@ def create_subject_department():
 
 @subject_department_blueprint.route('/subject/<int:subject_id>/department/<int:department_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_subject_department(subject_id, department_id):
     assoc = SubjectDepartmentService.get(subject_id, department_id)
     if not assoc:
@@ -41,6 +43,7 @@ def get_subject_department(subject_id, department_id):
 
 @subject_department_blueprint.route('/subject/<int:subject_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_departments_for_subject(subject_id):
     assocs = SubjectDepartmentService.get_departments_for_subject(subject_id)
     schema = SubjectDepartmentSchema(many=True)
@@ -48,6 +51,7 @@ def get_departments_for_subject(subject_id):
 
 @subject_department_blueprint.route('/department/<int:department_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_subjects_for_department(department_id):
     assocs = SubjectDepartmentService.get_subjects_for_department(department_id)
     schema = SubjectDepartmentSchema(many=True)
@@ -55,6 +59,7 @@ def get_subjects_for_department(department_id):
 
 @subject_department_blueprint.route('/subject/<int:subject_id>/department/<int:department_id>', methods=['DELETE'])
 @jwt_required
+@roles_required('Technical Admin')
 def delete_subject_department(subject_id, department_id):
     success = SubjectDepartmentService.delete(subject_id, department_id)
     if not success:

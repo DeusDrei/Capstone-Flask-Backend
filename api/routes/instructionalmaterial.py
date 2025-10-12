@@ -13,6 +13,7 @@ im_blueprint = Blueprint('instructionalmaterials', __name__, url_prefix="/instru
 
 @im_blueprint.route('/upload', methods=['POST'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def upload_pdf():
     """
     Separate endpoint for PDF upload and processing
@@ -42,6 +43,7 @@ def upload_pdf():
 
 @im_blueprint.route('/', methods=['POST'])
 @jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def create_instructional_material():
     """
     Create instructional material - supports both assignment (no file) and creation with file
@@ -104,6 +106,7 @@ def create_instructional_material():
 
 @im_blueprint.route('/<int:im_id>', methods=['PUT'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def update_instructional_material(im_id):
     """
     Update instructional material - can accept new PDF data or just metadata
@@ -149,6 +152,7 @@ def update_instructional_material(im_id):
 
 @im_blueprint.route('/<int:im_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_instructional_material(im_id):
     im = InstructionalMaterialService.get_instructional_material_by_id(im_id)
     if not im or im.is_deleted:
@@ -159,6 +163,7 @@ def get_instructional_material(im_id):
 
 @im_blueprint.route('/', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_all_instructional_materials():
     page = request.args.get('page', 1, type=int)
     paginated_ims = InstructionalMaterialService.get_all_instructional_materials(page=page)
@@ -175,6 +180,7 @@ def get_all_instructional_materials():
 
 @im_blueprint.route('/delete-pdf', methods=['POST'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def delete_pdf_from_s3():
     """
     Delete a PDF from S3 using the object key provided in the request body.
@@ -191,6 +197,7 @@ def delete_pdf_from_s3():
         
 @im_blueprint.route('/check-missing-sections', methods=['POST'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def check_missing_sections():
     """
     Check a PDF for missing required sections using a file upload.

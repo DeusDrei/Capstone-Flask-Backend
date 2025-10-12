@@ -3,12 +3,13 @@ from flask_smorest import Blueprint
 from api.services.universityim_service import UniversityIMService
 from api.schemas.universityims import UniversityIMSchema
 from sqlalchemy.exc import IntegrityError
-from api.middleware import jwt_required
+from api.middleware import jwt_required, roles_required
 
 universityim_blueprint = Blueprint('universityims', __name__, url_prefix="/universityims")
 
 @universityim_blueprint.route('/', methods=['POST'])
 @jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def create_universityim():
     try:
         data = UniversityIMSchema().load(request.json)
@@ -28,6 +29,7 @@ def create_universityim():
 
 @universityim_blueprint.route('/<int:universityim_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_universityim(universityim_id):
     universityim = UniversityIMService.get_universityim_by_id(universityim_id)
     if not universityim:
@@ -38,6 +40,7 @@ def get_universityim(universityim_id):
 
 @universityim_blueprint.route('/', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_all_universityims():
     page = request.args.get('page', 1, type=int)
     paginated_universityims = UniversityIMService.get_all_universityims(page=page)
@@ -53,6 +56,7 @@ def get_all_universityims():
 
 @universityim_blueprint.route('/<int:universityim_id>', methods=['PUT'])
 @jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def update_universityim(universityim_id):
     universityim_schema = UniversityIMSchema(partial=True)
 
@@ -69,6 +73,7 @@ def update_universityim(universityim_id):
 
 @universityim_blueprint.route('/<int:universityim_id>', methods=['DELETE'])
 @jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def delete_universityim(universityim_id):
     success = UniversityIMService.delete_universityim(universityim_id)
     if not success:
@@ -78,6 +83,7 @@ def delete_universityim(universityim_id):
 
 @universityim_blueprint.route('/college/<int:college_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_universityims_by_college(college_id):
     page = request.args.get('page', 1, type=int)
     paginated_universityims = UniversityIMService.get_universityims_by_college(college_id, page=page)
@@ -93,6 +99,7 @@ def get_universityims_by_college(college_id):
 
 @universityim_blueprint.route('/department/<int:department_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_universityims_by_department(department_id):
     page = request.args.get('page', 1, type=int)
     paginated_universityims = UniversityIMService.get_universityims_by_department(department_id, page=page)
@@ -108,6 +115,7 @@ def get_universityims_by_department(department_id):
 
 @universityim_blueprint.route('/subject/<int:subject_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_universityims_by_subject(subject_id):
     page = request.args.get('page', 1, type=int)
     paginated_universityims = UniversityIMService.get_universityims_by_subject(subject_id, page=page)

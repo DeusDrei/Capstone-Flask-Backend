@@ -3,12 +3,13 @@ from flask_smorest import Blueprint
 from api.services.serviceim_service import ServiceIMService
 from api.schemas.serviceims import ServiceIMSchema
 from sqlalchemy.exc import IntegrityError
-from api.middleware import jwt_required
+from api.middleware import jwt_required, roles_required
 
 serviceim_blueprint = Blueprint('serviceims', __name__, url_prefix="/serviceims")
 
 @serviceim_blueprint.route('/', methods=['POST'])
 @jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def create_serviceim():
     try:
         data = ServiceIMSchema().load(request.json)
@@ -31,6 +32,7 @@ def create_serviceim():
 
 @serviceim_blueprint.route('/<int:serviceim_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_serviceim(serviceim_id):
     serviceim = ServiceIMService.get_serviceim_by_id(serviceim_id)
     if not serviceim:
@@ -41,6 +43,7 @@ def get_serviceim(serviceim_id):
 
 @serviceim_blueprint.route('/', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_all_serviceims():
     page = request.args.get('page', 1, type=int)
     if page < 1:
@@ -59,6 +62,7 @@ def get_all_serviceims():
 
 @serviceim_blueprint.route('/<int:serviceim_id>', methods=['PUT'])
 @jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def update_serviceim(serviceim_id):
     serviceim_schema = ServiceIMSchema(partial=True)
 
@@ -80,6 +84,7 @@ def update_serviceim(serviceim_id):
 
 @serviceim_blueprint.route('/<int:serviceim_id>', methods=['DELETE'])
 @jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def delete_serviceim(serviceim_id):
     try:
         success = ServiceIMService.delete_serviceim(serviceim_id)
@@ -92,6 +97,7 @@ def delete_serviceim(serviceim_id):
 
 @serviceim_blueprint.route('/college/<int:college_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_serviceims_by_college(college_id):
     page = request.args.get('page', 1, type=int)
     if page < 1:
@@ -110,6 +116,7 @@ def get_serviceims_by_college(college_id):
 
 @serviceim_blueprint.route('/subject/<int:subject_id>', methods=['GET'])
 @jwt_required
+@roles_required('Faculty', 'PIMEC', 'UTLDO Admin', 'Technical Admin')
 def get_serviceims_by_subject(subject_id):
     page = request.args.get('page', 1, type=int)
     if page < 1:
