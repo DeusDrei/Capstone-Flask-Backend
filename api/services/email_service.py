@@ -48,7 +48,7 @@ class EmailService:
                 <h2>Instructional Material Notification</h2>
                 <p>Your instructional material has been {action} successfully.</p>
                 <table border="0" cellpadding="5">
-                    <tr><td><strong>Filename:</strong></td><td>{filename}</td></tr>
+                    <tr><td><strong>Instructional Material ID:</strong></td><td>{filename}</td></tr>
                     <tr><td><strong>Status:</strong></td><td>{status}</td></tr>
                     <tr><td><strong>Notes:</strong></td><td>{notes or 'No additional notes'}</td></tr>
                 </table>
