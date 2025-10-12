@@ -25,10 +25,29 @@ def upload_pdf():
         pdf_file = request.files['pdf_file']
         
         object_key, notes, temp_file_path = InstructionalMaterialService.process_pdf_file(pdf_file)
-        
+
+        # If caller provided an im_id in the multipart form, persist the s3_link
+        # and notes into the Instructional Material record so uploads update assigned IMs.
+        try:
+            im_id = request.form.get('im_id') or request.args.get('im_id')
+            if im_id:
+                try:
+                    validated = {
+                        's3_link': object_key,
+                        'notes': notes,
+                        # preserve existing status/other fields by using partial update
+                    }
+                    InstructionalMaterialService.update_instructional_material(int(im_id), validated)
+                except Exception as e:
+                    # Log but don't fail the upload — return the s3_link regardless
+                    print(f"Failed to persist s3_link for im_id={im_id}: {e}")
+        except Exception:
+            # ignore any errors reading im_id
+            pass
+
         if temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
-        
+
         return jsonify({
             's3_link': object_key,
             'notes': notes,
