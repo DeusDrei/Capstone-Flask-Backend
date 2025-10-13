@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from .config import Config
 from .extensions import db, migrate, api, ma, jwt
@@ -17,6 +17,16 @@ from .seeds.departmentsincluded import register_commands as register_departments
 
 def create_app():
     app = Flask(__name__)
+    
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = make_response()
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add('Access-Control-Allow-Headers', "*")
+            response.headers.add('Access-Control-Allow-Methods', "*")
+            return response
+    
     # Enable CORS for all domains on all routes (not recommended for production)
     CORS(app)
 
