@@ -3,7 +3,6 @@ from flask_smorest import Blueprint
 from api.services.auth_service import AuthService
 from api.schemas.users import UserSchema, UserLoginSchema
 from marshmallow import ValidationError
-from psycopg2.errors import UniqueViolation
 from sqlalchemy.exc import IntegrityError
 
 auth_blueprint = Blueprint('auth', __name__, url_prefix="/auth")
