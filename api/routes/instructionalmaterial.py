@@ -548,3 +548,18 @@ def get_instructional_materials_for_certification():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+@im_blueprint.route('/deadline-notifications', methods=['POST'])
+def send_deadline_notifications():
+    """
+    Send deadline notifications to authors for IMs due in 7, 5, 3, or 1 days
+    This endpoint is called by Cloud Scheduler and doesn't require authentication
+    """
+    try:
+        notifications_sent = InstructionalMaterialService.send_deadline_notifications()
+        return jsonify({
+            'message': f'Deadline notifications processed successfully',
+            'notifications_sent': notifications_sent
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+

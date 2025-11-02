@@ -226,6 +226,7 @@ class InstructionalMaterialService:
                 created_by=data['created_by'],
                 updated_by=data['updated_by'],
                 notes=notes,
+                due_date=data.get('due_date'),
                 university_im_id=data.get('university_im_id'),
                 service_im_id=data.get('service_im_id'),
                 imerpimec_id=data.get('imerpimec_id'),
@@ -356,8 +357,11 @@ class InstructionalMaterialService:
                 im.notes = notes
 
             for key, value in data.items():
-                if hasattr(im, key) and key not in ['s3_link', 'notes', 'published', 'utldo_attempt', 'pimec_attempt', 'ai_attempt', 'version']:
+                if hasattr(im, key) and key not in ['s3_link', 'notes', 'due_date', 'published', 'utldo_attempt', 'pimec_attempt', 'ai_attempt', 'version']:
                     setattr(im, key, value)
+            
+            if 'due_date' in data:
+                im.due_date = data['due_date']
 
             # Recompute version from counters before commit
             im.version = InstructionalMaterialService._compute_version(
@@ -380,25 +384,23 @@ class InstructionalMaterialService:
                     new_values={"status": im.status, "version": im.version, "notes": im.notes}
                 )
 
-            # Send email notification after successful update
-            try:
-                # Extract filename from object_key (use existing if no new one provided)
-                object_key = data.get('s3_link', im.s3_link)
-                filename = os.path.basename(object_key)
-                
-                # Get user email
-                user_email = data.get('email')
-                
-                EmailService.send_instructional_material_notification(
-                    receiver_email=user_email,
-                    filename=filename,
-                    status=im.status,  # Use the updated status
-                    notes=data.get('notes', im.notes),
-                    action="updated"
-                )
-            except Exception as e:
-                print(f"Email notification failed: {str(e)}")
-                # Don't raise the error as we don't want to fail the main operation
+            # Send email notification only for status changes or PDF uploads
+            if (status_changed or object_key) and data.get('email'):
+                try:
+                    # Extract filename from object_key (use existing if no new one provided)
+                    object_key = data.get('s3_link', im.s3_link)
+                    filename = os.path.basename(object_key)
+                    
+                    EmailService.send_instructional_material_notification(
+                        receiver_email=data.get('email'),
+                        filename=filename,
+                        status=im.status,
+                        notes=data.get('notes', im.notes),
+                        action="updated"
+                    )
+                except Exception as e:
+                    print(f"Email notification failed: {str(e)}")
+                    # Don't raise the error as we don't want to fail the main operation
             return im
 
         except Exception as e:
@@ -560,3 +562,56 @@ class InstructionalMaterialService:
             per_page=per_page, 
             error_out=False
         )
+
+    @staticmethod
+    def send_deadline_notifications():
+        """
+        Check for instructional materials with due dates in 7, 5, 3, or 1 days
+        and send email notifications to authors
+        """
+        from datetime import date, timedelta
+        from api.models.authors import Author
+        from api.models.users import User
+        from api.services.email_service import EmailService
+        
+        today = date.today()
+        notification_days = [7, 5, 3, 1]
+        
+        notifications_sent = 0
+        
+        for days in notification_days:
+            target_date = today + timedelta(days=days)
+            
+            # Get IMs with due date matching target date
+            ims = InstructionalMaterial.query.filter(
+                InstructionalMaterial.due_date == target_date,
+                InstructionalMaterial.is_deleted == False
+            ).all()
+            
+            for im in ims:
+                # Get authors for this IM
+                authors = Author.query.filter_by(im_id=im.id).all()
+                
+                for author in authors:
+                    user = User.query.get(author.user_id)
+                    if user and user.email:
+                        try:
+                            # Get subject name if available
+                            subject_name = None
+                            if im.university_im_id and im.university_im:
+                                subject_name = im.university_im.subject.name if im.university_im.subject else None
+                            elif im.service_im_id and im.service_im:
+                                subject_name = im.service_im.subject.name if im.service_im.subject else None
+                            
+                            EmailService.send_deadline_notification(
+                                receiver_email=user.email,
+                                im_id=im.id,
+                                days_remaining=days,
+                                due_date=target_date,
+                                subject_name=subject_name
+                            )
+                            notifications_sent += 1
+                        except Exception as e:
+                            print(f"Failed to send deadline notification to {user.email}: {str(e)}")
+        
+        return notifications_sent

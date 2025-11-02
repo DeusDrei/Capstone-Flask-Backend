@@ -15,6 +15,7 @@ class InstructionalMaterial(db.Model):
     version = db.Column(db.String(20), nullable=False)
     s3_link = db.Column(db.String(500), nullable=True)  # Made nullable for assignment workflow
     notes = db.Column(db.Text, nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
     published = db.Column(db.Integer, default=0, nullable=False)
     utldo_attempt = db.Column(db.Integer, default=0, nullable=False)
     pimec_attempt = db.Column(db.Integer, default=0, nullable=False)
@@ -30,7 +31,7 @@ class InstructionalMaterial(db.Model):
     imerpimec = db.relationship('IMERPIMEC', backref='instructional_materials')
     assigned_by_user = db.relationship('User', foreign_keys=[assigned_by], backref='assigned_materials')
 
-    def __init__(self, im_type, status, validity, version, s3_link, created_by, updated_by, university_im_id=None, service_im_id=None, imerpimec_id=None, assigned_by=None, notes=None, published=0, utldo_attempt=0, pimec_attempt=0, ai_attempt=0):
+    def __init__(self, im_type, status, validity, version, s3_link, created_by, updated_by, university_im_id=None, service_im_id=None, imerpimec_id=None, assigned_by=None, notes=None, due_date=None, published=0, utldo_attempt=0, pimec_attempt=0, ai_attempt=0):
         self.im_type = im_type
         self.status = status
         self.validity = validity
@@ -39,6 +40,7 @@ class InstructionalMaterial(db.Model):
         self.created_by = created_by
         self.updated_by = updated_by
         self.notes = notes
+        self.due_date = due_date
         self.university_im_id = university_im_id
         self.service_im_id = service_im_id
         self.imerpimec_id = imerpimec_id

@@ -91,9 +91,25 @@ class EmailService:
             
         except ClientError as e:
             print(f"SES email sending failed: {e.response['Error']['Message']}. Trying Gmail SMTP fallback...")
+            # Ensure recipients is defined for fallback
+            if 'recipients' not in locals():
+                if isinstance(receiver_email, str):
+                    recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
+                elif isinstance(receiver_email, (list, tuple)):
+                    recipients = [e.strip() for e in receiver_email if e and e.strip()]
+                else:
+                    return False
             return EmailService._send_via_gmail(recipients, filename, status, notes, action)
         except Exception as e:
             print(f"SES email sending failed: {str(e)}. Trying Gmail SMTP fallback...")
+            # Ensure recipients is defined for fallback
+            if 'recipients' not in locals():
+                if isinstance(receiver_email, str):
+                    recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
+                elif isinstance(receiver_email, (list, tuple)):
+                    recipients = [e.strip() for e in receiver_email if e and e.strip()]
+                else:
+                    return False
             return EmailService._send_via_gmail(recipients, filename, status, notes, action)
     
     @staticmethod
@@ -148,6 +164,150 @@ class EmailService:
             
         except Exception as e:
             print(f"Gmail SMTP fallback also failed: {str(e)}")
+            return False
+
+    @staticmethod
+    def send_deadline_notification(receiver_email, im_id, days_remaining, due_date, subject_name=None):
+        """
+        Send deadline notification email for instructional materials
+        
+        Args:
+            receiver_email: Email address of the recipient
+            im_id: Instructional material ID
+            days_remaining: Number of days until deadline
+            due_date: The due date
+            subject_name: Optional subject name
+        """
+        try:
+            sender_email = os.getenv('EMAIL_SENDER')
+            aws_region = os.getenv('AWS_REGION')
+
+            # normalize recipients
+            if isinstance(receiver_email, str):
+                recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
+            elif isinstance(receiver_email, (list, tuple)):
+                recipients = [e.strip() for e in receiver_email if e and e.strip()]
+            else:
+                raise ValueError("receiver_email must be a string or list/tuple of emails")
+            if not recipients:
+                raise ValueError("no valid recipient emails provided")
+
+            if not sender_email or not aws_region:
+                raise ValueError("EMAIL_SENDER or AWS_REGION not configured")
+
+            subject = f"Deadline Reminder: Instructional Material Due in {days_remaining} Day(s)"
+            
+            # HTML email content
+            html_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif;">
+                <h3 style="color:#d32f2f;">Deadline Reminder</h3>
+                <p><strong>IM-{im_id}</strong> {f'({subject_name})' if subject_name else ''} is due in <strong>{days_remaining} day(s)</strong></p>
+                <p>Due Date: {due_date}</p>
+                <p>Submit before deadline to avoid delays.</p>
+            </body>
+            </html>
+            """
+            
+            # Plain text version
+            text_body = f"""
+            DEADLINE REMINDER
+            
+            IM-{im_id} {f'({subject_name})' if subject_name else ''} is due in {days_remaining} day(s)
+            Due Date: {due_date}
+            
+            Submit before deadline to avoid delays.
+            """
+            
+            # Send email using SES
+            ses_client = boto3.client('ses', region_name=aws_region)
+
+            response = ses_client.send_email(
+                Destination={'ToAddresses': recipients},
+                Message={
+                    'Body': {
+                        'Html': {'Charset': 'UTF-8', 'Data': html_body},
+                        'Text': {'Charset': 'UTF-8', 'Data': text_body}
+                    },
+                    'Subject': {'Charset': 'UTF-8', 'Data': subject}
+                },
+                Source=sender_email
+            )
+            
+            return True
+            
+        except ClientError as e:
+            print(f"SES deadline email failed: {e.response['Error']['Message']}. Trying Gmail SMTP fallback...")
+            # Ensure recipients is defined for fallback
+            if 'recipients' not in locals():
+                if isinstance(receiver_email, str):
+                    recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
+                elif isinstance(receiver_email, (list, tuple)):
+                    recipients = [e.strip() for e in receiver_email if e and e.strip()]
+                else:
+                    return False
+            return EmailService._send_deadline_via_gmail(recipients, im_id, days_remaining, due_date, subject_name)
+        except Exception as e:
+            print(f"SES deadline email failed: {str(e)}. Trying Gmail SMTP fallback...")
+            # Ensure recipients is defined for fallback
+            if 'recipients' not in locals():
+                if isinstance(receiver_email, str):
+                    recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
+                elif isinstance(receiver_email, (list, tuple)):
+                    recipients = [e.strip() for e in receiver_email if e and e.strip()]
+                else:
+                    return False
+            return EmailService._send_deadline_via_gmail(recipients, im_id, days_remaining, due_date, subject_name)
+    
+    @staticmethod
+    def _send_deadline_via_gmail(recipients, im_id, days_remaining, due_date, subject_name):
+        """Fallback to Gmail SMTP for deadline notifications"""
+        try:
+            sender_email = os.getenv('EMAIL_SENDER')
+            smtp_server = os.getenv('SMTP_SERVER')
+            smtp_port = int(os.getenv('SMTP_PORT', 587))
+            smtp_username = os.getenv('SMTP_USERNAME')
+            smtp_password = os.getenv('SMTP_PASSWORD')
+            
+            if not all([smtp_server, smtp_username, smtp_password]):
+                print("Gmail SMTP not configured")
+                return False
+            
+            subject = f"Deadline Reminder: Instructional Material Due in {days_remaining} Day(s)"
+            
+            html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color: #222; line-height:1.4;">
+                <h2 style="color:#d32f2f;">⚠️ Deadline Reminder</h2>
+                <p>This is a friendly reminder that your instructional material is due soon.</p>
+                <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <p><strong>Instructional Material ID:</strong> IM-{im_id}</p>
+                    {f'<p><strong>Subject:</strong> {subject_name}</p>' if subject_name else ''}
+                    <p><strong>Due Date:</strong> {due_date}</p>
+                    <p><strong>Days Remaining:</strong> <span style="color: #d32f2f; font-weight: bold;">{days_remaining} day(s)</span></p>
+                </div>
+                <p>Please ensure you submit your instructional material before the deadline.</p>
+                <p>Best regards,<br>Instructional Materials Management System</p>
+            </body>
+            </html>
+            """
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = sender_email
+            msg['To'] = ", ".join(recipients)
+            
+            msg.attach(MIMEText(html, 'html'))
+            
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_username, smtp_password)
+                server.sendmail(sender_email, recipients, msg.as_string())
+            
+            return True
+            
+        except Exception as e:
+            print(f"Gmail SMTP deadline notification failed: {str(e)}")
             return False
 
     @staticmethod
