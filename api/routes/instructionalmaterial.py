@@ -551,7 +551,7 @@ def get_instructional_materials_for_certification():
 @im_blueprint.route('/deadline-notifications', methods=['POST'])
 def send_deadline_notifications():
     """
-    Send deadline notifications to authors for IMs due in 7, 5, 3, or 1 days
+    Send deadline notifications to authors for IMs due in 7, 6, 5, 4, 3, 2, or 1 days
     This endpoint is called by Cloud Scheduler and doesn't require authentication
     """
     try:

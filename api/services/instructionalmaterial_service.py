@@ -566,8 +566,8 @@ class InstructionalMaterialService:
     @staticmethod
     def send_deadline_notifications():
         """
-        Check for instructional materials with due dates in 7, 5, 3, or 1 days
-        and send email notifications to authors
+        Check for instructional materials with due dates in 7, 6, 5, 4, 3, 2, or 1 days
+        and send email notifications to authors. Also send past due notifications.
         """
         from datetime import date, timedelta
         from api.models.authors import Author
@@ -575,10 +575,11 @@ class InstructionalMaterialService:
         from api.services.email_service import EmailService
         
         today = date.today()
-        notification_days = [7, 5, 3, 1]
+        notification_days = [7, 6, 5, 4, 3, 2, 1]
         
         notifications_sent = 0
         
+        # Send upcoming deadline notifications
         for days in notification_days:
             target_date = today + timedelta(days=days)
             
@@ -613,5 +614,35 @@ class InstructionalMaterialService:
                             notifications_sent += 1
                         except Exception as e:
                             print(f"Failed to send deadline notification to {user.email}: {str(e)}")
+        
+        # Send past due notifications
+        past_due_ims = InstructionalMaterial.query.filter(
+            InstructionalMaterial.due_date < today,
+            InstructionalMaterial.is_deleted == False,
+            InstructionalMaterial.status != 'Published'
+        ).all()
+        
+        for im in past_due_ims:
+            authors = Author.query.filter_by(im_id=im.id).all()
+            
+            for author in authors:
+                user = User.query.get(author.user_id)
+                if user and user.email:
+                    try:
+                        subject_name = None
+                        if im.university_im_id and im.university_im:
+                            subject_name = im.university_im.subject.name if im.university_im.subject else None
+                        elif im.service_im_id and im.service_im:
+                            subject_name = im.service_im.subject.name if im.service_im.subject else None
+                        
+                        EmailService.send_past_due_notification(
+                            receiver_email=user.email,
+                            im_id=im.id,
+                            due_date=im.due_date,
+                            subject_name=subject_name
+                        )
+                        notifications_sent += 1
+                    except Exception as e:
+                        print(f"Failed to send past due notification to {user.email}: {str(e)}")
         
         return notifications_sent
