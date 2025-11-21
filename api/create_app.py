@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from .config import Config
 from .extensions import db, migrate, api, ma, jwt
-from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint, universityim_blueprint, serviceim_blueprint, collegeincluded_blueprint, im_blueprint, author_blueprint, subject_department_blueprint, imerpimec_blueprint, departmentincluded_blueprint, activitylog_blueprint, requirements_blueprint
+from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint, universityim_blueprint, serviceim_blueprint, collegeincluded_blueprint, im_blueprint, author_blueprint, subject_department_blueprint, imerpimec_blueprint, departmentincluded_blueprint, activitylog_blueprint, requirements_blueprint, im_submission_blueprint
 
 from .seeds.users import register_commands as register_users
 from .seeds.departments import register_commands as register_departments
@@ -67,5 +67,6 @@ def create_app():
     api.register_blueprint(departmentincluded_blueprint)
     api.register_blueprint(activitylog_blueprint)
     api.register_blueprint(requirements_blueprint)
+    api.register_blueprint(im_submission_blueprint)
 
     return app

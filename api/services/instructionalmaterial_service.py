@@ -301,6 +301,7 @@ class InstructionalMaterialService:
         im = InstructionalMaterial.query.filter_by(id=im_id, is_deleted=False).first()
         object_key = data.get('s3_link')
         notes = data.get('notes')
+        pdf_uploaded = object_key and (not im or im.s3_link != object_key)
         if not im:
             return None
 
@@ -372,6 +373,15 @@ class InstructionalMaterialService:
             )
 
             db.session.commit()
+            
+            # Create submission record if PDF was uploaded
+            if pdf_uploaded and data.get('user_id'):
+                from api.services.im_submission_service import IMSubmissionService
+                IMSubmissionService.create_submission(
+                    user_id=data['user_id'],
+                    im_id=im_id,
+                    due_date=im.due_date
+                )
             
             if data.get('user_id'):
                 ActivityLogService.log_activity(

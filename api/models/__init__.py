@@ -11,3 +11,4 @@ from .subject_departments import SubjectDepartment
 from .imerpimec import IMERPIMEC
 from .departmentsincluded import DepartmentIncluded
 from .activitylog import ActivityLog
+from .im_submissions import IMSubmission
