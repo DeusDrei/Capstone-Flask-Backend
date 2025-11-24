@@ -245,7 +245,6 @@ class EmailService:
                     <p><strong>Days Remaining:</strong> <span style="color: #d32f2f; font-weight: bold;">{days_remaining} day(s)</span></p>
                 </div>
                 <p>Please ensure you submit your instructional material before the deadline.</p>
-                <p>Best regards,<br>Instructional Materials Management System</p>
             </body>
             </html>
             """
