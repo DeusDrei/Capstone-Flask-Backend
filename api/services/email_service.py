@@ -1,6 +1,8 @@
 import os
+import base64
 import boto3
 import smtplib
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from botocore.exceptions import ClientError
@@ -13,7 +15,7 @@ class EmailService:
     @staticmethod
     def send_instructional_material_notification(receiver_email, filename, status, notes, action="created"):
         """
-        Send email notification for instructional material actions using AWS SES
+        Send email notification for instructional material actions using Brevo API
         
         Args:
             receiver_email: Email address of the recipient
@@ -24,9 +26,9 @@ class EmailService:
         """
         try:
             sender_email = os.getenv('EMAIL_SENDER')
-            aws_region = os.getenv('AWS_REGION')
+            brevo_api_key = os.getenv('BREVO_API_KEY')
 
-            # normalize recipients: accept single string, comma-separated string, or list/tuple
+            # normalize recipients
             if isinstance(receiver_email, str):
                 recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
             elif isinstance(receiver_email, (list, tuple)):
@@ -36,12 +38,11 @@ class EmailService:
             if not recipients:
                 raise ValueError("no valid recipient emails provided")
 
-            if not sender_email or not aws_region:
-                raise ValueError("EMAIL_SENDER or AWS_REGION not configured")
+            if not sender_email or not brevo_api_key:
+                raise ValueError("EMAIL_SENDER or BREVO_API_KEY not configured")
 
             subject = f"Instructional Material {action.capitalize()}: {filename}"
             
-            # HTML email content
             html_body = f"""
             <html>
             <body>
@@ -58,51 +59,28 @@ class EmailService:
             </html>
             """
             
-            # Plain text version
-            text_body = f"""
-            Instructional Material Notification
-            
-            Your instructional material has been {action} successfully.
-            
-            Filename: {filename}
-            Status: {status}
-            Notes: {notes or 'No additional notes'}
-            
-            Thank you for using our instructional materials system.
-            """
-            
-            # Send email using SES
-            ses_client = boto3.client('ses', region_name=aws_region)
-
-            # SES accepts a list of addresses
-            response = ses_client.send_email(
-                Destination={'ToAddresses': recipients},
-                Message={
-                    'Body': {
-                        'Html': {'Charset': 'UTF-8', 'Data': html_body},
-                        'Text': {'Charset': 'UTF-8', 'Data': text_body}
-                    },
-                    'Subject': {'Charset': 'UTF-8', 'Data': subject}
+            # Send email using Brevo
+            response = requests.post(
+                'https://api.brevo.com/v3/smtp/email',
+                headers={
+                    'api-key': brevo_api_key,
+                    'Content-Type': 'application/json'
                 },
-                Source=sender_email
+                json={
+                    'sender': {'email': sender_email},
+                    'to': [{'email': email} for email in recipients],
+                    'subject': subject,
+                    'htmlContent': html_body
+                }
             )
             
-            return True
+            if response.status_code == 201:
+                return True
+            else:
+                raise Exception(f"Brevo API error: {response.text}")
             
-        except ClientError as e:
-            print(f"SES email sending failed: {e.response['Error']['Message']}. Trying Gmail SMTP fallback...")
-            # Ensure recipients is defined for fallback
-            if 'recipients' not in locals():
-                if isinstance(receiver_email, str):
-                    recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
-                elif isinstance(receiver_email, (list, tuple)):
-                    recipients = [e.strip() for e in receiver_email if e and e.strip()]
-                else:
-                    return False
-            return EmailService._send_via_gmail(recipients, filename, status, notes, action)
         except Exception as e:
-            print(f"SES email sending failed: {str(e)}. Trying Gmail SMTP fallback...")
-            # Ensure recipients is defined for fallback
+            print(f"Brevo email sending failed: {str(e)}. Trying Gmail SMTP fallback...")
             if 'recipients' not in locals():
                 if isinstance(receiver_email, str):
                     recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
@@ -180,7 +158,7 @@ class EmailService:
         """
         try:
             sender_email = os.getenv('EMAIL_SENDER')
-            aws_region = os.getenv('AWS_REGION')
+            brevo_api_key = os.getenv('BREVO_API_KEY')
 
             # normalize recipients
             if isinstance(receiver_email, str):
@@ -192,12 +170,11 @@ class EmailService:
             if not recipients:
                 raise ValueError("no valid recipient emails provided")
 
-            if not sender_email or not aws_region:
-                raise ValueError("EMAIL_SENDER or AWS_REGION not configured")
+            if not sender_email or not brevo_api_key:
+                raise ValueError("EMAIL_SENDER or BREVO_API_KEY not configured")
 
             subject = f"Deadline Reminder: Instructional Material Due in {days_remaining} Day(s)"
             
-            # HTML email content
             html_body = f"""
             <html>
             <body style="font-family: Arial, sans-serif;">
@@ -209,47 +186,28 @@ class EmailService:
             </html>
             """
             
-            # Plain text version
-            text_body = f"""
-            DEADLINE REMINDER
-            
-            IM-{im_id} {f'({subject_name})' if subject_name else ''} is due in {days_remaining} day(s)
-            Due Date: {due_date}
-            
-            Submit before deadline to avoid delays.
-            """
-            
-            # Send email using SES
-            ses_client = boto3.client('ses', region_name=aws_region)
-
-            response = ses_client.send_email(
-                Destination={'ToAddresses': recipients},
-                Message={
-                    'Body': {
-                        'Html': {'Charset': 'UTF-8', 'Data': html_body},
-                        'Text': {'Charset': 'UTF-8', 'Data': text_body}
-                    },
-                    'Subject': {'Charset': 'UTF-8', 'Data': subject}
+            # Send email using Brevo
+            response = requests.post(
+                'https://api.brevo.com/v3/smtp/email',
+                headers={
+                    'api-key': brevo_api_key,
+                    'Content-Type': 'application/json'
                 },
-                Source=sender_email
+                json={
+                    'sender': {'email': sender_email},
+                    'to': [{'email': email} for email in recipients],
+                    'subject': subject,
+                    'htmlContent': html_body
+                }
             )
             
-            return True
+            if response.status_code == 201:
+                return True
+            else:
+                raise Exception(f"Brevo API error: {response.text}")
             
-        except ClientError as e:
-            print(f"SES deadline email failed: {e.response['Error']['Message']}. Trying Gmail SMTP fallback...")
-            # Ensure recipients is defined for fallback
-            if 'recipients' not in locals():
-                if isinstance(receiver_email, str):
-                    recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
-                elif isinstance(receiver_email, (list, tuple)):
-                    recipients = [e.strip() for e in receiver_email if e and e.strip()]
-                else:
-                    return False
-            return EmailService._send_deadline_via_gmail(recipients, im_id, days_remaining, due_date, subject_name)
         except Exception as e:
-            print(f"SES deadline email failed: {str(e)}. Trying Gmail SMTP fallback...")
-            # Ensure recipients is defined for fallback
+            print(f"Brevo deadline email failed: {str(e)}. Trying Gmail SMTP fallback...")
             if 'recipients' not in locals():
                 if isinstance(receiver_email, str):
                     recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
@@ -312,7 +270,7 @@ class EmailService:
 
     @staticmethod
     def send_file_to_recipients(receiver_email, file_bytes, filename, subject=None, html_body=None, text_body=None):
-        """Send a file attachment to multiple recipients. Tries SES Raw first, falls back to SMTP.
+        """Send a file attachment to multiple recipients. Tries Brevo first, falls back to SMTP.
 
         receiver_email: string CSV or list/tuple of addresses
         file_bytes: bytes of the file to attach
@@ -320,7 +278,7 @@ class EmailService:
         subject: email subject (optional)
         html_body / text_body: optional bodies
         """
-        # normalize recipients same as other methods
+        # normalize recipients
         if isinstance(receiver_email, str):
             recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
         elif isinstance(receiver_email, (list, tuple)):
@@ -331,43 +289,43 @@ class EmailService:
             raise ValueError("no valid recipient emails provided")
 
         sender_email = os.getenv('EMAIL_SENDER')
-        aws_region = os.getenv('AWS_REGION')
+        brevo_api_key = os.getenv('BREVO_API_KEY')
         if not sender_email:
             raise ValueError("EMAIL_SENDER not configured")
 
         subj = subject or f"File from Instructional Materials: {filename}"
+        html_content = html_body or "<p>Please find the attached file.</p>"
 
-        # build MIME message with attachment
-        msg = MIMEMultipart('mixed')
-        msg['Subject'] = subj
-        msg['From'] = sender_email
-        msg['To'] = ", ".join(recipients)
-
-        # alternative (text/html)
-        alt = MIMEMultipart('alternative')
-        if text_body:
-            alt.attach(MIMEText(text_body, 'plain'))
-        if html_body:
-            alt.attach(MIMEText(html_body, 'html'))
-        if text_body or html_body:
-            msg.attach(alt)
-
-        # attach file
-        part = MIMEApplication(file_bytes)
-        part.add_header('Content-Disposition', 'attachment', filename=filename)
-        msg.attach(part)
-
-        # Try SES Raw
-        try:
-            if aws_region:
-                ses = boto3.client('ses', region_name=aws_region)
-                # send_raw_email supports RawMessage and Destinations
-                ses.send_raw_email(Source=sender_email, Destinations=recipients, RawMessage={'Data': msg.as_string()})
-                return True
-        except ClientError as e:
-            print(f"SES raw send failed: {e.response.get('Error', {}).get('Message')}. Falling back to SMTP.")
-        except Exception as e:
-            print(f"SES raw send error: {str(e)}. Falling back to SMTP.")
+        # Try Brevo with attachment
+        if brevo_api_key:
+            try:
+                # Encode file as base64
+                file_base64 = base64.b64encode(file_bytes).decode('utf-8')
+                
+                response = requests.post(
+                    'https://api.brevo.com/v3/smtp/email',
+                    headers={
+                        'api-key': brevo_api_key,
+                        'Content-Type': 'application/json'
+                    },
+                    json={
+                        'sender': {'email': sender_email},
+                        'to': [{'email': email} for email in recipients],
+                        'subject': subj,
+                        'htmlContent': html_content,
+                        'attachment': [{
+                            'content': file_base64,
+                            'name': filename
+                        }]
+                    }
+                )
+                
+                if response.status_code == 201:
+                    return True
+                else:
+                    print(f"Brevo attachment send failed: {response.text}. Falling back to SMTP.")
+            except Exception as e:
+                print(f"Brevo attachment error: {str(e)}. Falling back to SMTP.")
 
         # SMTP fallback
         try:
@@ -378,6 +336,20 @@ class EmailService:
             if not all([smtp_server, smtp_username, smtp_password]):
                 print("SMTP not configured for attachment fallback")
                 return False
+
+            msg = MIMEMultipart('mixed')
+            msg['Subject'] = subj
+            msg['From'] = sender_email
+            msg['To'] = ", ".join(recipients)
+
+            if html_body:
+                msg.attach(MIMEText(html_body, 'html'))
+            elif text_body:
+                msg.attach(MIMEText(text_body, 'plain'))
+
+            part = MIMEApplication(file_bytes)
+            part.add_header('Content-Disposition', 'attachment', filename=filename)
+            msg.attach(part)
 
             with smtplib.SMTP(smtp_server, smtp_port) as server:
                 server.starttls()
@@ -401,7 +373,7 @@ class EmailService:
         """
         try:
             sender_email = os.getenv('EMAIL_SENDER')
-            aws_region = os.getenv('AWS_REGION')
+            brevo_api_key = os.getenv('BREVO_API_KEY')
 
             # normalize recipients
             if isinstance(receiver_email, str):
@@ -413,12 +385,11 @@ class EmailService:
             if not recipients:
                 raise ValueError("no valid recipient emails provided")
 
-            if not sender_email or not aws_region:
-                raise ValueError("EMAIL_SENDER or AWS_REGION not configured")
+            if not sender_email or not brevo_api_key:
+                raise ValueError("EMAIL_SENDER or BREVO_API_KEY not configured")
 
             subject = f"PAST DUE: Instructional Material Overdue"
             
-            # HTML email content
             html_body = f"""
             <html>
             <body style="font-family: Arial, sans-serif;">
@@ -430,45 +401,28 @@ class EmailService:
             </html>
             """
             
-            # Plain text version
-            text_body = f"""
-            PAST DUE NOTICE
-            
-            IM-{im_id} {f'({subject_name})' if subject_name else ''} is PAST DUE
-            Original Due Date: {due_date}
-            
-            Please submit immediately to avoid further delays.
-            """
-            
-            # Send email using SES
-            ses_client = boto3.client('ses', region_name=aws_region)
-
-            response = ses_client.send_email(
-                Destination={'ToAddresses': recipients},
-                Message={
-                    'Body': {
-                        'Html': {'Charset': 'UTF-8', 'Data': html_body},
-                        'Text': {'Charset': 'UTF-8', 'Data': text_body}
-                    },
-                    'Subject': {'Charset': 'UTF-8', 'Data': subject}
+            # Send email using Brevo
+            response = requests.post(
+                'https://api.brevo.com/v3/smtp/email',
+                headers={
+                    'api-key': brevo_api_key,
+                    'Content-Type': 'application/json'
                 },
-                Source=sender_email
+                json={
+                    'sender': {'email': sender_email},
+                    'to': [{'email': email} for email in recipients],
+                    'subject': subject,
+                    'htmlContent': html_body
+                }
             )
             
-            return True
+            if response.status_code == 201:
+                return True
+            else:
+                raise Exception(f"Brevo API error: {response.text}")
             
-        except ClientError as e:
-            print(f"SES past due email failed: {e.response['Error']['Message']}. Trying Gmail SMTP fallback...")
-            if 'recipients' not in locals():
-                if isinstance(receiver_email, str):
-                    recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
-                elif isinstance(receiver_email, (list, tuple)):
-                    recipients = [e.strip() for e in receiver_email if e and e.strip()]
-                else:
-                    return False
-            return EmailService._send_past_due_via_gmail(recipients, im_id, due_date, subject_name)
         except Exception as e:
-            print(f"SES past due email failed: {str(e)}. Trying Gmail SMTP fallback...")
+            print(f"Brevo past due email failed: {str(e)}. Trying Gmail SMTP fallback...")
             if 'recipients' not in locals():
                 if isinstance(receiver_email, str):
                     recipients = [e.strip() for e in receiver_email.split(",") if e.strip()]
