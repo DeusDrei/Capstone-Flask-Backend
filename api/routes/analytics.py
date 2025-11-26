@@ -1,16 +1,18 @@
 from flask import request, jsonify
 from flask_smorest import Blueprint
 from api.middleware import jwt_required, roles_required
-from sqlalchemy import func, desc, and_, extract, or_
+from sqlalchemy import func, desc, and_, extract, or_, case
 from api.extensions import db
 from api.models.activitylog import ActivityLog
 from api.models.instructionalmaterials import InstructionalMaterial
+from api.models.im_submissions import IMSubmission
 from api.models.users import User
 from api.models.colleges import College
 from api.models.departments import Department
 from api.models.universityims import UniversityIM
 from api.models.serviceims import ServiceIM
-from datetime import datetime, timedelta
+from api.models.authors import Author
+from datetime import datetime, timedelta, date
 
 analytics_blueprint = Blueprint('analytics', __name__, url_prefix="/analytics")
 
@@ -109,114 +111,54 @@ def get_overview():
 @jwt_required
 @roles_required('Technical Admin', 'UTLDO Admin', 'PIMEC')
 def get_college_analytics():
-    """Get analytics by college"""
+    """Get analytics by college - counts IMs per college correctly"""
     try:
         college_id = request.args.get('college_id', type=int)
         
-        # Base query for university IMs
-        university_query = db.session.query(
-            College.id,
-            College.name,
-            func.count(InstructionalMaterial.id).label('count')
-        ).join(
-            UniversityIM, College.id == UniversityIM.college_id
-        ).join(
-            InstructionalMaterial, 
-            and_(
-                InstructionalMaterial.university_im_id == UniversityIM.id,
-                InstructionalMaterial.is_deleted == False
-            )
-        )
+        # Get all non-deleted IMs with their college info
+        ims = InstructionalMaterial.query.filter(
+            InstructionalMaterial.is_deleted == False
+        ).all()
         
-        if college_id:
-            university_query = university_query.filter(College.id == college_id)
-        
-        university_im_counts = university_query.group_by(College.id, College.name).all()
-
-        # Base query for service IMs
-        service_query = db.session.query(
-            College.id,
-            College.name,
-            func.count(InstructionalMaterial.id).label('count')
-        ).join(
-            ServiceIM, College.id == ServiceIM.college_id
-        ).join(
-            InstructionalMaterial,
-            and_(
-                InstructionalMaterial.service_im_id == ServiceIM.id,
-                InstructionalMaterial.is_deleted == False
-            )
-        )
-        
-        if college_id:
-            service_query = service_query.filter(College.id == college_id)
-        
-        service_im_counts = service_query.group_by(College.id, College.name).all()
-
-        # Combine counts
+        # Aggregate by college
         college_counts = {}
-        for cid, cname, count in university_im_counts:
+        
+        for im in ims:
+            # Determine college from either university_im or service_im
+            cid = None
+            cname = None
+            
+            if im.university_im_id and im.university_im:
+                cid = im.university_im.college_id
+                cname = im.university_im.college.name if im.university_im.college else None
+            elif im.service_im_id and im.service_im:
+                cid = im.service_im.college_id
+                cname = im.service_im.college.name if im.service_im.college else None
+            
+            if cid is None:
+                continue
+                
+            # Filter by college if specified
+            if college_id and cid != college_id:
+                continue
+            
             if cid not in college_counts:
-                college_counts[cid] = {'id': cid, 'name': cname, 'count': 0}
-            college_counts[cid]['count'] += count
-
-        for cid, cname, count in service_im_counts:
-            if cid not in college_counts:
-                college_counts[cid] = {'id': cid, 'name': cname, 'count': 0}
-            college_counts[cid]['count'] += count
-
-        # Get certified IMs per college
-        certified_university_query = db.session.query(
-            College.id,
-            func.count(InstructionalMaterial.id).label('certified_count')
-        ).join(
-            UniversityIM, College.id == UniversityIM.college_id
-        ).join(
-            InstructionalMaterial,
-            and_(
-                InstructionalMaterial.university_im_id == UniversityIM.id,
-                InstructionalMaterial.status == 'Certified',
-                InstructionalMaterial.is_deleted == False
-            )
-        )
-        
-        if college_id:
-            certified_university_query = certified_university_query.filter(College.id == college_id)
-        
-        certified_university = certified_university_query.group_by(College.id).all()
-
-        certified_service_query = db.session.query(
-            College.id,
-            func.count(InstructionalMaterial.id).label('certified_count')
-        ).join(
-            ServiceIM, College.id == ServiceIM.college_id
-        ).join(
-            InstructionalMaterial,
-            and_(
-                InstructionalMaterial.service_im_id == ServiceIM.id,
-                InstructionalMaterial.status == 'Certified',
-                InstructionalMaterial.is_deleted == False
-            )
-        )
-        
-        if college_id:
-            certified_service_query = certified_service_query.filter(College.id == college_id)
-        
-        certified_service = certified_service_query.group_by(College.id).all()
-
-        # Add certified counts
-        for cid, cert_count in certified_university:
-            if cid in college_counts:
-                college_counts[cid]['certified'] = college_counts[cid].get('certified', 0) + cert_count
-
-        for cid, cert_count in certified_service:
-            if cid in college_counts:
-                college_counts[cid]['certified'] = college_counts[cid].get('certified', 0) + cert_count
+                college_counts[cid] = {
+                    'id': cid, 
+                    'name': cname, 
+                    'count': 0, 
+                    'certified': 0
+                }
+            
+            college_counts[cid]['count'] += 1
+            
+            if im.status == 'Certified':
+                college_counts[cid]['certified'] += 1
 
         # Calculate completion rate
         for cid in college_counts:
             total = college_counts[cid]['count']
-            certified = college_counts[cid].get('certified', 0)
+            certified = college_counts[cid]['certified']
             college_counts[cid]['completion_rate'] = round((certified / total * 100) if total > 0 else 0, 2)
 
         return jsonify({
@@ -364,14 +306,324 @@ def get_activity_timeline():
 
         # Format for frontend
         timeline_data = {}
-        for date, action, count in activities_by_day:
-            date_str = date.strftime('%Y-%m-%d')
+        for date_val, action, count in activities_by_day:
+            date_str = date_val.strftime('%Y-%m-%d')
             if date_str not in timeline_data:
                 timeline_data[date_str] = {'date': date_str, 'CREATE': 0, 'UPDATE': 0}
             timeline_data[date_str][action] = count
 
         return jsonify({
             'timeline': list(timeline_data.values())
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@analytics_blueprint.route('/submissions/by-user', methods=['GET'])
+@jwt_required
+@roles_required('Technical Admin', 'UTLDO Admin', 'PIMEC')
+def get_submissions_by_user():
+    """Get submission counts per user with optional college/department filters"""
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        college_id = request.args.get('college_id', type=int)
+        department_id = request.args.get('department_id', type=int)
+        
+        # Base query for submission counts per user
+        query = db.session.query(
+            User.id,
+            User.first_name,
+            User.last_name,
+            User.role,
+            College.name.label('college_name'),
+            func.count(IMSubmission.id).label('submission_count')
+        ).join(
+            IMSubmission, User.id == IMSubmission.user_id
+        ).outerjoin(
+            College, User.college_id == College.id
+        )
+        
+        # Filter by college if provided
+        if college_id:
+            query = query.filter(User.college_id == college_id)
+        
+        # Filter by department - check if submission relates to an IM in that department
+        if department_id:
+            im_filters = get_filtered_im_query(department_id=department_id)
+            matching_im_ids = db.session.query(InstructionalMaterial.id).filter(*im_filters).subquery()
+            query = query.filter(IMSubmission.im_id.in_(db.session.query(matching_im_ids.c.id)))
+        
+        user_submissions = query.group_by(
+            User.id, User.first_name, User.last_name, User.role, College.name
+        ).order_by(
+            desc('submission_count')
+        ).limit(limit).all()
+
+        return jsonify({
+            'user_submissions': [
+                {
+                    'user_id': uid,
+                    'name': f"{fname} {lname}",
+                    'role': role,
+                    'college': college or 'N/A',
+                    'submissions': count
+                } for uid, fname, lname, role, college, count in user_submissions
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@analytics_blueprint.route('/submissions/timeline', methods=['GET'])
+@jwt_required
+@roles_required('Technical Admin', 'UTLDO Admin', 'PIMEC')
+def get_submissions_timeline():
+    """Get submission frequency over time"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        college_id = request.args.get('college_id', type=int)
+        department_id = request.args.get('department_id', type=int)
+        
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Base query for submissions by day
+        query = db.session.query(
+            func.date(IMSubmission.date_submitted).label('date'),
+            func.count(IMSubmission.id).label('count')
+        ).filter(
+            IMSubmission.date_submitted >= start_date
+        )
+        
+        # Filter by college/department if provided
+        if college_id or department_id:
+            im_filters = get_filtered_im_query(college_id, department_id)
+            matching_im_ids = db.session.query(InstructionalMaterial.id).filter(*im_filters).subquery()
+            query = query.filter(IMSubmission.im_id.in_(db.session.query(matching_im_ids.c.id)))
+        
+        submissions_by_day = query.group_by(
+            func.date(IMSubmission.date_submitted)
+        ).order_by('date').all()
+
+        return jsonify({
+            'timeline': [
+                {'date': d.strftime('%Y-%m-%d'), 'submissions': c}
+                for d, c in submissions_by_day
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@analytics_blueprint.route('/deadlines', methods=['GET'])
+@jwt_required
+@roles_required('Technical Admin', 'UTLDO Admin', 'PIMEC')
+def get_deadline_analytics():
+    """Get deadline-related analytics: upcoming, overdue, on-track IMs"""
+    try:
+        college_id = request.args.get('college_id', type=int)
+        department_id = request.args.get('department_id', type=int)
+        
+        today = date.today()
+        
+        # Active statuses (not yet completed)
+        active_statuses = ['Assigned to Faculty', 'For PIMEC Evaluation', 'For UTLDO Evaluation', 
+                          'For Resubmission', 'For IMER Evaluation']
+        
+        # Get all non-deleted IMs
+        all_ims = InstructionalMaterial.query.filter(
+            InstructionalMaterial.is_deleted == False
+        ).all()
+        
+        # Filter by college/department if needed and categorize
+        overdue_list = []
+        due_soon_list = []
+        overdue_count = 0
+        due_soon_count = 0
+        due_month_count = 0
+        on_track_count = 0
+        no_deadline_count = 0
+        
+        for im in all_ims:
+            # Get college info for filtering
+            im_college_id = None
+            im_department_id = None
+            subject_name = None
+            college_name = None
+            
+            if im.university_im_id and im.university_im:
+                im_college_id = im.university_im.college_id
+                im_department_id = im.university_im.department_id
+                subject_name = im.university_im.subject.name if im.university_im.subject else None
+                college_name = im.university_im.college.name if im.university_im.college else None
+            elif im.service_im_id and im.service_im:
+                im_college_id = im.service_im.college_id
+                subject_name = im.service_im.subject.name if im.service_im.subject else None
+                college_name = im.service_im.college.name if im.service_im.college else None
+            
+            # Apply college/department filters
+            if college_id and im_college_id != college_id:
+                continue
+            if department_id and im_department_id != department_id:
+                continue
+            
+            # Skip completed IMs
+            if im.status not in active_statuses:
+                continue
+            
+            # Check deadline status
+            if im.due_date is None:
+                no_deadline_count += 1
+                continue
+            
+            if im.due_date < today:
+                # Overdue
+                overdue_count += 1
+                days_overdue = (today - im.due_date).days
+                if len(overdue_list) < 10:
+                    overdue_list.append({
+                        'im_id': im.id,
+                        'subject': subject_name,
+                        'college': college_name,
+                        'status': im.status,
+                        'due_date': im.due_date.isoformat(),
+                        'days_overdue': days_overdue
+                    })
+            elif im.due_date <= today + timedelta(days=7):
+                # Due soon (within 7 days)
+                due_soon_count += 1
+                days_remaining = (im.due_date - today).days
+                if len(due_soon_list) < 10:
+                    due_soon_list.append({
+                        'im_id': im.id,
+                        'subject': subject_name,
+                        'college': college_name,
+                        'status': im.status,
+                        'due_date': im.due_date.isoformat(),
+                        'days_remaining': days_remaining
+                    })
+                due_month_count += 1
+            elif im.due_date <= today + timedelta(days=30):
+                # Due this month
+                due_month_count += 1
+                on_track_count += 1
+            else:
+                # On track (due > 30 days away)
+                on_track_count += 1
+
+        return jsonify({
+            'summary': {
+                'overdue': overdue_count,
+                'due_soon': due_soon_count,
+                'due_this_month': due_month_count,
+                'on_track': on_track_count,
+                'no_deadline': no_deadline_count
+            },
+            'overdue_ims': overdue_list,
+            'due_soon_ims': due_soon_list
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@analytics_blueprint.route('/workflow', methods=['GET'])
+@jwt_required
+@roles_required('Technical Admin', 'UTLDO Admin', 'PIMEC')
+def get_workflow_analytics():
+    """Get workflow analytics: IMs by status stage, bottlenecks"""
+    try:
+        college_id = request.args.get('college_id', type=int)
+        department_id = request.args.get('department_id', type=int)
+        
+        # Get all non-deleted IMs
+        all_ims = InstructionalMaterial.query.filter(
+            InstructionalMaterial.is_deleted == False
+        ).all()
+        
+        # Define workflow stages
+        workflow_stages = [
+            'Assigned to Faculty',
+            'For IMER Evaluation',
+            'For PIMEC Evaluation',
+            'For UTLDO Evaluation',
+            'For Resubmission',
+            'Certified',
+            'Published'
+        ]
+        
+        # Initialize stage data
+        stage_data = {s: {'count': 0, 'name': s} for s in workflow_stages}
+        
+        # Count IMs by status with proper filtering
+        for im in all_ims:
+            # Get college/department for filtering
+            im_college_id = None
+            im_department_id = None
+            
+            if im.university_im_id and im.university_im:
+                im_college_id = im.university_im.college_id
+                im_department_id = im.university_im.department_id
+            elif im.service_im_id and im.service_im:
+                im_college_id = im.service_im.college_id
+            
+            # Apply filters
+            if college_id and im_college_id != college_id:
+                continue
+            if department_id and im_department_id != department_id:
+                continue
+            
+            # Count by status
+            status = im.status
+            if status in stage_data:
+                stage_data[status]['count'] += 1
+            else:
+                # Add new status if not in predefined list
+                stage_data[status] = {'count': 1, 'name': status}
+        
+        # Get IMs stuck at each stage (no activity in last 14 days)
+        fourteen_days_ago = datetime.utcnow() - timedelta(days=14)
+        evaluation_stages = ['For IMER Evaluation', 'For PIMEC Evaluation', 'For UTLDO Evaluation', 'For Resubmission']
+        stuck_counts = {stage: 0 for stage in evaluation_stages}
+        
+        # Get recent activity IM ids
+        recent_activity_im_ids = set(
+            r[0] for r in db.session.query(ActivityLog.record_id).filter(
+                ActivityLog.table_name == 'instructionalmaterials',
+                ActivityLog.created_at >= fourteen_days_ago
+            ).all()
+        )
+        
+        # Check each IM for being stuck
+        for im in all_ims:
+            if im.status in evaluation_stages:
+                # Apply same college/department filters
+                im_college_id = None
+                im_department_id = None
+                
+                if im.university_im_id and im.university_im:
+                    im_college_id = im.university_im.college_id
+                    im_department_id = im.university_im.department_id
+                elif im.service_im_id and im.service_im:
+                    im_college_id = im.service_im.college_id
+                
+                if college_id and im_college_id != college_id:
+                    continue
+                if department_id and im_department_id != department_id:
+                    continue
+                
+                # Check if stuck (no recent activity)
+                if im.id not in recent_activity_im_ids:
+                    stuck_counts[im.status] += 1
+
+        # Calculate totals
+        completed_statuses = ['Certified', 'Published']
+        total_active = sum(stage_data[s]['count'] for s in stage_data if s not in completed_statuses)
+        total_completed = sum(stage_data.get(s, {}).get('count', 0) for s in completed_statuses)
+
+        return jsonify({
+            'stages': list(stage_data.values()),
+            'stuck_ims': stuck_counts,
+            'total_active': total_active,
+            'total_completed': total_completed
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

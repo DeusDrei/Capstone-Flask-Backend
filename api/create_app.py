@@ -24,12 +24,12 @@ def create_app():
         if request.method == "OPTIONS":
             response = make_response()
             response.headers.add("Access-Control-Allow-Origin", "*")
-            response.headers.add('Access-Control-Allow-Headers', "*")
-            response.headers.add('Access-Control-Allow-Methods', "*")
+            response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization")
+            response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS")
             return response
     
-    # Enable CORS for all domains on all routes (not recommended for production)
-    CORS(app)
+    # Enable CORS for all domains on all routes with explicit headers
+    CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "Authorization"]}})
 
     # Or enable CORS for specific domains only (recommended for production)
     # CORS(app, resources={r"/*": {"origins": ["https://flutter-frontend.example.com", "https://angular-frontend.example.com"]}})
@@ -70,6 +70,5 @@ def create_app():
     api.register_blueprint(activitylog_blueprint)
     api.register_blueprint(analytics_blueprint)
     api.register_blueprint(requirements_blueprint)
-    api.register_blueprint(im_submission_blueprint)
 
     return app
