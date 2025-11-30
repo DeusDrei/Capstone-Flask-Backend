@@ -1,7 +1,8 @@
-from flask import request, jsonify
+from flask import request, jsonify, Response
 from flask_smorest import Blueprint
 from api.middleware import jwt_required, roles_required
-from sqlalchemy import func, desc, and_, extract, or_, case
+from api.services.analytics_service import AnalyticsService
+from sqlalchemy import func, desc, and_, extract
 from api.extensions import db
 from api.models.activitylog import ActivityLog
 from api.models.instructionalmaterials import InstructionalMaterial
@@ -11,7 +12,6 @@ from api.models.colleges import College
 from api.models.departments import Department
 from api.models.universityims import UniversityIM
 from api.models.serviceims import ServiceIM
-from api.models.authors import Author
 from datetime import datetime, timedelta, date
 
 analytics_blueprint = Blueprint('analytics', __name__, url_prefix="/analytics")
@@ -625,5 +625,27 @@ def get_workflow_analytics():
             'total_active': total_active,
             'total_completed': total_completed
         }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@analytics_blueprint.route('/export', methods=['GET'])
+@jwt_required
+@roles_required('Technical Admin', 'UTLDO Admin', 'PIMEC')
+def export_analytics():
+    """Export analytics data as CSV"""
+    try:
+        college_id = request.args.get('college_id', type=int)
+        department_id = request.args.get('department_id', type=int)
+
+        csv_data = AnalyticsService.export_overview_to_csv(college_id, department_id)
+
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=analytics_report.csv'
+            }
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
