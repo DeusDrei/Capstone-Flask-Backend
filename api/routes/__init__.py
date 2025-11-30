@@ -14,3 +14,4 @@ from .departmentincluded import *
 from .activitylog import *
 from .requirements import *
 from .im_submission import *
+from .analytics import *

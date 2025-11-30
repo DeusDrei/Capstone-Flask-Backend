@@ -656,3 +656,105 @@ class InstructionalMaterialService:
                         print(f"Failed to send past due notification to {user.email}: {str(e)}")
         
         return notifications_sent
+
+    @staticmethod
+    def export_to_csv(college_id=None, department_id=None, status=None):
+        """
+        Export instructional materials list to CSV format.
+        Returns a CSV string.
+        """
+        import csv
+        import io
+        from datetime import datetime
+        from api.models.universityims import UniversityIM
+        from api.models.serviceims import ServiceIM
+        from api.models.authors import Author
+        from api.models.users import User
+        
+        # Get all non-deleted IMs
+        query = InstructionalMaterial.query.filter(
+            InstructionalMaterial.is_deleted == False
+        )
+        
+        if status:
+            query = query.filter(InstructionalMaterial.status == status)
+        
+        all_ims = query.all()
+        
+        # Filter by college/department if needed
+        filtered_ims = []
+        for im in all_ims:
+            im_college_id = None
+            im_department_id = None
+            
+            if im.university_im_id and im.university_im:
+                im_college_id = im.university_im.college_id
+                im_department_id = im.university_im.department_id
+            elif im.service_im_id and im.service_im:
+                im_college_id = im.service_im.college_id
+            
+            if college_id and im_college_id != college_id:
+                continue
+            if department_id and im_department_id != department_id:
+                continue
+            
+            filtered_ims.append(im)
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'ID',
+            'Title',
+            'Type',
+            'Subject',
+            'College',
+            'Department',
+            'Status',
+            'Version',
+            'Authors',
+            'Due Date',
+            'Created At',
+            'Updated At'
+        ])
+        
+        for im in filtered_ims:
+            # Get related data
+            im_type = 'University' if im.university_im_id else 'Service'
+            subject_name = None
+            college_name = None
+            department_name = None
+            
+            if im.university_im_id and im.university_im:
+                subject_name = im.university_im.subject.name if im.university_im.subject else None
+                college_name = im.university_im.college.name if im.university_im.college else None
+                department_name = im.university_im.department.name if im.university_im.department else None
+            elif im.service_im_id and im.service_im:
+                subject_name = im.service_im.subject.name if im.service_im.subject else None
+                college_name = im.service_im.college.name if im.service_im.college else None
+            
+            # Get authors
+            authors = Author.query.filter_by(im_id=im.id).all()
+            author_names = []
+            for author in authors:
+                user = User.query.get(author.user_id)
+                if user:
+                    author_names.append(f"{user.first_name} {user.last_name}")
+            
+            writer.writerow([
+                im.id,
+                im.title,
+                im_type,
+                subject_name or 'N/A',
+                college_name or 'N/A',
+                department_name or 'N/A',
+                im.status,
+                im.version or 'N/A',
+                ', '.join(author_names) if author_names else 'N/A',
+                im.due_date.isoformat() if im.due_date else 'N/A',
+                im.created_at.isoformat() if im.created_at else 'N/A',
+                im.updated_at.isoformat() if im.updated_at else 'N/A'
+            ])
+        
+        return output.getvalue()

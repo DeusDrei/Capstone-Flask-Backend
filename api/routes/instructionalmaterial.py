@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, Response
 from flask import send_file, redirect
 from flask_smorest import Blueprint
 from api.services.instructionalmaterial_service import InstructionalMaterialService
@@ -560,6 +560,36 @@ def send_deadline_notifications():
             'message': f'Deadline notifications processed successfully',
             'notifications_sent': notifications_sent
         }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@im_blueprint.route('/export', methods=['GET'])
+@jwt_required
+@roles_required('Technical Admin', 'UTLDO Admin', 'PIMEC')
+def export_instructional_materials():
+    """
+    Export instructional materials list as CSV.
+    Optional filters: college_id, department_id, status
+    """
+    try:
+        college_id = request.args.get('college_id', type=int)
+        department_id = request.args.get('department_id', type=int)
+        status = request.args.get('status', type=str)
+
+        csv_data = InstructionalMaterialService.export_to_csv(
+            college_id=college_id,
+            department_id=department_id,
+            status=status
+        )
+
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=instructional_materials.csv'
+            }
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
