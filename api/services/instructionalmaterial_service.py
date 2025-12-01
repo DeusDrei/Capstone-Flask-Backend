@@ -382,6 +382,10 @@ class InstructionalMaterialService:
                     im_id=im_id,
                     due_date=im.due_date
                 )
+                # Clear due_date to prevent repeated past due notifications
+                if im.status == 'For PIMEC Evaluation':
+                    im.due_date = None
+                    db.session.commit()
             
             if data.get('user_id'):
                 ActivityLogService.log_activity(
