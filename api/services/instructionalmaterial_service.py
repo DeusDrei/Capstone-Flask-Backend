@@ -382,10 +382,11 @@ class InstructionalMaterialService:
                     im_id=im_id,
                     due_date=im.due_date
                 )
-                # Clear due_date to prevent repeated past due notifications
-                if im.status == 'For PIMEC Evaluation':
-                    im.due_date = None
-                    db.session.commit()
+            
+            # Clear due_date to prevent repeated past due notifications
+            if im.status in ['For PIMEC Evaluation','For UTLDO Evaluation', 'Published'] and im.due_date:
+                im.due_date = None
+                db.session.commit()
             
             if data.get('user_id'):
                 ActivityLogService.log_activity(
@@ -399,19 +400,30 @@ class InstructionalMaterialService:
                 )
 
             # Send email notification only for status changes or PDF uploads
-            if (status_changed or object_key) and data.get('email'):
+            if status_changed or object_key:
                 try:
-                    # Extract filename from object_key (use existing if no new one provided)
-                    object_key = data.get('s3_link', im.s3_link)
-                    filename = os.path.basename(object_key)
+                    from api.models.authors import Author
+                    from api.models.users import User
                     
-                    EmailService.send_instructional_material_notification(
-                        receiver_email=data.get('email'),
-                        filename=filename,
-                        status=im.status,
-                        notes=data.get('notes', im.notes),
-                        action="updated"
-                    )
+                    # Get all author emails for this IM
+                    authors = Author.query.filter_by(im_id=im_id).all()
+                    author_emails = []
+                    for author in authors:
+                        user = User.query.get(author.user_id)
+                        if user and user.email:
+                            author_emails.append(user.email)
+                    
+                    if author_emails:
+                        object_key = data.get('s3_link', im.s3_link)
+                        filename = os.path.basename(object_key)
+                        
+                        EmailService.send_instructional_material_notification(
+                            receiver_email=author_emails,
+                            filename=filename,
+                            status=im.status,
+                            notes=data.get('notes', im.notes),
+                            action="updated"
+                        )
                 except Exception as e:
                     print(f"Email notification failed: {str(e)}")
                     # Don't raise the error as we don't want to fail the main operation
