@@ -1,5 +1,7 @@
 import os
 import json
+import subprocess
+import shutil
 import qrcode
 import tempfile
 import boto3
@@ -16,8 +18,14 @@ from api.services.email_service import EmailService
 
 class CertificateService:
     @staticmethod
-    def generate_certificates(im_id):
-        """Generate certificates for all authors of an IM"""
+    def generate_certificates(im_id, template_path=None):
+        """Generate certificates for all authors of an IM.
+        
+        Args:
+            im_id: The instructional material ID.
+            template_path: Optional path to a custom DOCX template. If not
+                provided the default template is downloaded from S3.
+        """
         im = InstructionalMaterial.query.get(im_id)
         if not im:
             raise ValueError("Instructional Material not found")
@@ -33,29 +41,92 @@ class CertificateService:
         academic_year = CertificateService._format_academic_year(im.validity)
         date_issued = date.today().strftime("%B %d, %Y")
         
-        # Download template from S3
-        template_path = CertificateService._download_template()
+        # Download template from S3 only if a custom one wasn't supplied
+        owns_template = template_path is None
+        if owns_template:
+            template_path = CertificateService._download_template()
         
         certificates = []
-        for author in authors:
-            user = User.query.get(author.user_id)
-            if not user:
-                continue
-            
-            # Generate certificate
+        try:
+            for author in authors:
+                user = User.query.get(author.user_id)
+                if not user:
+                    continue
+                
+                # Generate certificate
+                cert_data = CertificateService._generate_certificate(
+                    template_path, user, college_name, course_code, course_title,
+                    program_name, semester, academic_year, date_issued, im_id
+                )
+                
+                certificates.append(cert_data)
+        finally:
+            # Cleanup template only if we downloaded it
+            if owns_template and os.path.exists(template_path):
+                os.remove(template_path)
+        
+        return certificates
+    
+    @staticmethod
+    def generate_certificate_for_user(im_id, user_id, template_path=None):
+        """Generate and send a certificate for a single author only.
+        
+        Useful for post-publish catch-up when an author was missed.
+        """
+        im = InstructionalMaterial.query.get(im_id)
+        if not im:
+            raise ValueError("Instructional Material not found")
+        
+        user = User.query.get(user_id)
+        if not user:
+            raise ValueError("User not found")
+        
+        college_name, course_code, course_title, program_name = CertificateService._get_im_details(im)
+        semester = im.semester or "N/A"
+        academic_year = CertificateService._format_academic_year(im.validity)
+        date_issued = date.today().strftime("%B %d, %Y")
+        
+        owns_template = template_path is None
+        if owns_template:
+            template_path = CertificateService._download_template()
+        
+        try:
             cert_data = CertificateService._generate_certificate(
                 template_path, user, college_name, course_code, course_title,
                 program_name, semester, academic_year, date_issued, im_id
             )
-            
-            certificates.append(cert_data)
+        finally:
+            if owns_template and os.path.exists(template_path):
+                os.remove(template_path)
         
-        # Cleanup template
-        if os.path.exists(template_path):
-            os.remove(template_path)
+        return cert_data
+
+    @staticmethod
+    def get_certificates_for_user(user_id):
+        """Return all certificates issued to a user, enriched with IM details."""
+        from api.models.im_certificates import IMCertificate
+        from api.models.instructionalmaterials import InstructionalMaterial
         
-        return certificates
-    
+        certs = IMCertificate.query.filter_by(user_id=user_id).order_by(IMCertificate.date_issued.desc()).all()
+        result = []
+        for cert in certs:
+            im = InstructionalMaterial.query.get(cert.im_id)
+            college_name, course_code, course_title, _ = CertificateService._get_im_details(im) if im else ('N/A', 'N/A', 'N/A', 'N/A')
+            result.append({
+                'id': cert.id,
+                'qr_id': cert.qr_id,
+                'im_id': cert.im_id,
+                'user_id': cert.user_id,
+                's3_link': CertificateService._try_presign_pdf(cert.qr_id),
+                's3_link_docx': CertificateService._resolve_docx_link(cert.qr_id),
+                'date_issued': cert.date_issued.isoformat() if cert.date_issued else None,
+                'created_at': cert.created_at.isoformat() if cert.created_at else None,
+                'subject_code': course_code,
+                'subject_title': course_title,
+                'im_version': im.version if im else None,
+            })
+        return result
+
     @staticmethod
     def _get_im_details(im):
         """Extract college, course, and program details from IM"""
@@ -162,33 +233,119 @@ class CertificateService:
         # Add QR code to document (bottom right)
         CertificateService._add_qr_to_document(doc, qr_img)
         
-        # Save to temp file
+        # Save DOCX to temp file
         temp_output = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
         doc.save(temp_output.name)
         temp_output.close()
-        
-        # Upload to S3
-        s3_link = CertificateService._upload_to_s3(temp_output.name, cert.qr_id)
-        cert.s3_link = s3_link
+
+        # Convert DOCX → PDF (best-effort; won't crash if unavailable)
+        pdf_path = CertificateService._convert_docx_to_pdf(temp_output.name)
+
+        # Upload DOCX to S3
+        docx_key = f"generated-certificates/{cert.qr_id}.docx"
+        docx_s3_link = CertificateService._upload_to_s3(temp_output.name, docx_key)
+
+        # Upload PDF to S3 if conversion succeeded
+        pdf_s3_link = None
+        if pdf_path:
+            pdf_key = f"generated-certificates/{cert.qr_id}.pdf"
+            pdf_s3_link = CertificateService._upload_to_s3(pdf_path, pdf_key)
+
+        # Persist the DOCX key as the stable s3_link (PDF can be re-derived from qr_id)
+        cert.s3_link = docx_key
         db.session.commit()
-        
-        # Send email
-        EmailService.send_file_to_recipients(
+
+        # Email: one message with DOCX always attached; PDF too if available
+        today = date.today()
+        try:
+            valid_until = today.replace(year=today.year + 5).strftime("%B %d, %Y")
+        except ValueError:
+            valid_until = date(today.year + 5, 2, 28).strftime("%B %d, %Y")
+
+        email_subject = f"Certificate of Appreciation \u2014 {course_code} ({academic_year})"
+        email_body = f"""
+<p>Dear {author_name},</p>
+
+<p>On behalf of the institution, we are pleased to present you with a
+<strong>Certificate of Appreciation</strong> in recognition of your valuable contribution
+in developing an instructional material. The details of your certificate are as follows:</p>
+
+<table style="border-collapse:collapse;font-size:14px;margin:12px 0;">
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Certificate ID</td>
+    <td style="padding:5px 0;">{cert.qr_id}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Subject Code</td>
+    <td style="padding:5px 0;">{course_code}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Subject Title</td>
+    <td style="padding:5px 0;">{course_title}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Program</td>
+    <td style="padding:5px 0;">{program_name}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">College</td>
+    <td style="padding:5px 0;">{college_name}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Semester</td>
+    <td style="padding:5px 0;">{semester}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Academic Year</td>
+    <td style="padding:5px 0;">{academic_year}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Date Issued</td>
+    <td style="padding:5px 0;">{date_issued}</td>
+  </tr>
+  <tr>
+    <td style="padding:5px 20px 5px 0;font-weight:bold;white-space:nowrap;color:#555;">Valid Until</td>
+    <td style="padding:5px 0;">{valid_until}</td>
+  </tr>
+</table>
+
+<p>Your certificate is attached to this email in DOCX and PDF formats.
+Please retain a copy for your personal records. A QR code is embedded in the
+certificate for quick verification.</p>
+
+<p>We truly appreciate your dedication and efforts in enhancing the quality of
+instruction. Your work reflects a deep commitment to academic excellence and to
+the growth of your students.</p>
+
+<p>Congratulations, and thank you.</p>
+
+<p>Sincerely,<br>
+<strong>Instructional Materials Management System (IMMS)</strong></p>
+"""
+        attachments = [(open(temp_output.name, 'rb').read(), f"{cert.qr_id}.docx")]
+        if pdf_path and os.path.exists(pdf_path):
+            attachments.append((open(pdf_path, 'rb').read(), f"{cert.qr_id}.pdf"))
+        EmailService.send_files_to_recipients(
             user.email,
-            open(temp_output.name, 'rb').read(),
-            f"{cert.qr_id}.docx",
-            subject=f"Certificate of Submission - {course_code}",
-            html_body=f"<p>Dear {author_name},</p><p>Please find attached your Certificate of Submission for {course_code}: {course_title}.</p>"
+            attachments,
+            subject=email_subject,
+            html_body=email_body,
         )
-        
-        # Cleanup
+
+        # Cleanup temp files
         os.remove(temp_output.name)
-        
+        if pdf_path:
+            try:
+                shutil.rmtree(os.path.dirname(pdf_path), ignore_errors=True)
+            except Exception:
+                pass
+
         return {
             'qr_id': cert.qr_id,
             'user_id': user.id,
             'author_name': author_name,
-            's3_link': s3_link
+            's3_link': pdf_s3_link,           # PDF presigned URL, or None if conversion failed
+            's3_link_docx': docx_s3_link,     # DOCX presigned URL, always present
         }
     
     @staticmethod
@@ -240,12 +397,124 @@ class CertificateService:
                             return
     
     @staticmethod
-    def _upload_to_s3(file_path, qr_id):
-        """Upload certificate to S3"""
+    def _upload_to_s3(file_path, s3_key):
+        """Upload a file to S3 and return a presigned URL valid for 7 days."""
         bucket_name = os.getenv('AWS_BUCKET_NAME')
-        s3_key = f"generated-certificates/{qr_id}.docx"
-        
         s3 = boto3.client('s3')
         s3.upload_file(file_path, bucket_name, s3_key)
-        
-        return s3_key
+        presigned_url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': s3_key},
+            ExpiresIn=604800  # 7 days
+        )
+        return presigned_url
+
+    @staticmethod
+    def _convert_docx_to_pdf(docx_path):
+        """Convert a DOCX file to PDF.
+        Tries docx2pdf first (uses Word on Windows, LibreOffice on Linux/macOS),
+        then falls back to a raw LibreOffice subprocess.
+        Returns the path to the generated PDF, or None if both methods fail.
+        """
+        out_dir = tempfile.mkdtemp()
+        base = os.path.splitext(os.path.basename(docx_path))[0]
+        pdf_path = os.path.join(out_dir, base + '.pdf')
+
+        # --- Method 1: docx2pdf (cross-platform) ---
+        try:
+            import pythoncom  # type: ignore
+            from docx2pdf import convert as d2p_convert  # type: ignore
+            pythoncom.CoInitialize()
+            try:
+                d2p_convert(docx_path, pdf_path)
+            finally:
+                pythoncom.CoUninitialize()
+            if os.path.exists(pdf_path):
+                return pdf_path
+        except Exception as e:
+            print(f"[cert] docx2pdf failed ({e}), trying LibreOffice…")
+
+        # --- Method 2: LibreOffice headless subprocess ---
+        try:
+            subprocess.run(
+                [
+                    'libreoffice', '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', out_dir,
+                    docx_path,
+                ],
+                check=True,
+                capture_output=True,
+                timeout=120,
+            )
+            lo_pdf = os.path.join(out_dir, base + '.pdf')
+            if os.path.exists(lo_pdf):
+                return lo_pdf
+        except Exception as e:
+            print(f"[cert] LibreOffice fallback also failed ({e})")
+
+        shutil.rmtree(out_dir, ignore_errors=True)
+        return None  # caller must handle gracefully
+
+    @staticmethod
+    def _key_exists_in_s3(key):
+        """Return True if the given S3 key exists in the bucket."""
+        bucket_name = os.getenv('AWS_BUCKET_NAME')
+        try:
+            boto3.client('s3').head_object(Bucket=bucket_name, Key=key)
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _try_presign_pdf(qr_id):
+        """Return a presigned URL for the PDF of this cert, or None if it doesn't exist yet."""
+        key = f"generated-certificates/{qr_id}.pdf"
+        if not CertificateService._key_exists_in_s3(key):
+            return None
+        bucket_name = os.getenv('AWS_BUCKET_NAME')
+        return boto3.client('s3').generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': key},
+            ExpiresIn=604800
+        )
+
+    @staticmethod
+    def _resolve_s3_link(raw_link):
+        """Ensure raw_link is a usable HTTPS URL.
+        - Already a URL → return as-is.
+        - Legacy DOCX key → rewrite to .pdf key before presigning.
+        - Other S3 key → presign directly.
+        """
+        if not raw_link:
+            return raw_link
+        if raw_link.startswith('http://') or raw_link.startswith('https://'):
+            return raw_link
+        bucket_name = os.getenv('AWS_BUCKET_NAME')
+        key = raw_link
+        if key.endswith('.docx'):
+            key = key[:-5] + '.pdf'
+        try:
+            s3 = boto3.client('s3')
+            return s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': bucket_name, 'Key': key},
+                ExpiresIn=604800
+            )
+        except Exception:
+            return raw_link
+
+    @staticmethod
+    def _resolve_docx_link(qr_id):
+        """Generate a fresh presigned URL for the DOCX of a given cert (by qr_id)."""
+        bucket_name = os.getenv('AWS_BUCKET_NAME')
+        key = f"generated-certificates/{qr_id}.docx"
+        try:
+            s3 = boto3.client('s3')
+            return s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': bucket_name, 'Key': key},
+                ExpiresIn=604800
+            )
+        except Exception:
+            return None

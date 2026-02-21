@@ -269,11 +269,21 @@ class EmailService:
 
     @staticmethod
     def send_file_to_recipients(receiver_email, file_bytes, filename, subject=None, html_body=None, text_body=None):
-        """Send a file attachment to multiple recipients. Tries Brevo first, falls back to SMTP.
+        """Send a single-attachment email. Wraps send_files_to_recipients."""
+        return EmailService.send_files_to_recipients(
+            receiver_email,
+            [(file_bytes, filename)],
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+        )
+
+    @staticmethod
+    def send_files_to_recipients(receiver_email, attachments, subject=None, html_body=None, text_body=None):
+        """Send an email with one or more file attachments. Tries Brevo first, falls back to SMTP.
 
         receiver_email: string CSV or list/tuple of addresses
-        file_bytes: bytes of the file to attach
-        filename: filename for attachment
+        attachments: list of (file_bytes, filename) tuples
         subject: email subject (optional)
         html_body / text_body: optional bodies
         """
@@ -292,15 +302,17 @@ class EmailService:
         if not sender_email:
             raise ValueError("EMAIL_SENDER not configured")
 
-        subj = subject or f"File from Instructional Materials: {filename}"
-        html_content = html_body or "<p>Please find the attached file.</p>"
+        first_filename = attachments[0][1] if attachments else "file"
+        subj = subject or f"File from Instructional Materials: {first_filename}"
+        html_content = html_body or "<p>Please find the attached file(s).</p>"
 
-        # Try Brevo with attachment
+        # Try Brevo with attachments
         if brevo_api_key:
             try:
-                # Encode file as base64
-                file_base64 = base64.b64encode(file_bytes).decode('utf-8')
-                
+                brevo_attachments = [
+                    {'content': base64.b64encode(fb).decode('utf-8'), 'name': fn}
+                    for fb, fn in attachments
+                ]
                 response = requests.post(
                     'https://api.brevo.com/v3/smtp/email',
                     headers={
@@ -312,13 +324,9 @@ class EmailService:
                         'to': [{'email': email} for email in recipients],
                         'subject': subj,
                         'htmlContent': html_content,
-                        'attachment': [{
-                            'content': file_base64,
-                            'name': filename
-                        }]
+                        'attachment': brevo_attachments
                     }
                 )
-                
                 if response.status_code == 201:
                     return True
                 else:
@@ -346,9 +354,10 @@ class EmailService:
             elif text_body:
                 msg.attach(MIMEText(text_body, 'plain'))
 
-            part = MIMEApplication(file_bytes)
-            part.add_header('Content-Disposition', 'attachment', filename=filename)
-            msg.attach(part)
+            for file_bytes, filename in attachments:
+                part = MIMEApplication(file_bytes)
+                part.add_header('Content-Disposition', 'attachment', filename=filename)
+                msg.attach(part)
 
             with smtplib.SMTP(smtp_server, smtp_port) as server:
                 server.starttls()

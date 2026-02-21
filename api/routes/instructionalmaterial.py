@@ -325,10 +325,28 @@ def get_presigned_pdf_url(im_id):
 @jwt_required
 @roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
 def generate_certificates(im_id):
-    """Generate certificates for all authors of an IM"""
+    """Generate personalized certificates for all authors of an IM.
+    
+    Optionally accepts a multipart/form-data request with a 'template_file'
+    (.docx) to use instead of the default S3 template.
+    """
     try:
         from api.services.certificate_service import CertificateService
-        certificates = CertificateService.generate_certificates(im_id)
+        template_path = None
+        temp_template = None
+        if request.files and 'template_file' in request.files:
+            uploaded = request.files['template_file']
+            if uploaded.filename:
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
+                uploaded.save(tmp.name)
+                tmp.close()
+                template_path = tmp.name
+                temp_template = tmp.name
+        try:
+            certificates = CertificateService.generate_certificates(im_id, template_path=template_path)
+        finally:
+            if temp_template and os.path.exists(temp_template):
+                os.remove(temp_template)
         return jsonify({
             'message': f'Generated {len(certificates)} certificates',
             'certificates': certificates
@@ -339,7 +357,47 @@ def generate_certificates(im_id):
         return jsonify({'error': str(e)}), 500
 
 
-@im_blueprint.route('/cert-of-appreciation', methods=['GET'])
+@im_blueprint.route('/<int:im_id>/generate-certificate-for-user/<int:user_id>', methods=['POST'])
+@jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
+def generate_certificate_for_user(im_id, user_id):
+    """Generate and send a certificate for a single author (post-publish catch-up)."""
+    try:
+        from api.services.certificate_service import CertificateService
+        template_path = None
+        temp_template = None
+        if request.files and 'template_file' in request.files:
+            uploaded = request.files['template_file']
+            if uploaded.filename:
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
+                uploaded.save(tmp.name)
+                tmp.close()
+                template_path = tmp.name
+                temp_template = tmp.name
+        try:
+            cert = CertificateService.generate_certificate_for_user(im_id, user_id, template_path=template_path)
+        finally:
+            if temp_template and os.path.exists(temp_template):
+                os.remove(temp_template)
+        return jsonify({'message': 'Certificate generated', 'certificate': cert}), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@im_blueprint.route('/certificates/user/<int:user_id>', methods=['GET'])
+@jwt_required
+def get_certificates_for_user(user_id):
+    """Return all certificates issued to a specific user."""
+    try:
+        from api.services.certificate_service import CertificateService
+        certs = CertificateService.get_certificates_for_user(user_id)
+        return jsonify({'certificates': certs}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @jwt_required
 def get_cert_of_appreciation():
     """Download the certificate DOCX template from S3.
@@ -556,6 +614,11 @@ def get_instructional_materials_for_certification():
         page = request.args.get('page', 1, type=int)
         paginated_ims = InstructionalMaterialService.get_instructional_materials_for_certification(page=page)
         ims_data = InstructionalMaterialSchema(many=True).dump(paginated_ims.items)
+        # Enrich each IM with college_id and department_id from its linked university_im / service_im
+        for im_obj, im_dict in zip(paginated_ims.items, ims_data):
+            linked = im_obj.university_im or im_obj.service_im
+            im_dict['college_id'] = linked.college_id if linked and hasattr(linked, 'college_id') else None
+            im_dict['department_id'] = linked.department_id if linked and hasattr(linked, 'department_id') else None
         return jsonify({
             'instructional_materials': ims_data,
             'total': paginated_ims.total,
