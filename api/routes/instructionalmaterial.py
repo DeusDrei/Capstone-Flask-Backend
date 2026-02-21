@@ -321,6 +321,24 @@ def get_presigned_pdf_url(im_id):
         return jsonify({'error': str(e)}), 500
 
 
+@im_blueprint.route('/<int:im_id>/generate-certificates', methods=['POST'])
+@jwt_required
+@roles_required('PIMEC', 'UTLDO Admin', 'Technical Admin')
+def generate_certificates(im_id):
+    """Generate certificates for all authors of an IM"""
+    try:
+        from api.services.certificate_service import CertificateService
+        certificates = CertificateService.generate_certificates(im_id)
+        return jsonify({
+            'message': f'Generated {len(certificates)} certificates',
+            'certificates': certificates
+        }), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @im_blueprint.route('/cert-of-appreciation', methods=['GET'])
 @jwt_required
 def get_cert_of_appreciation():

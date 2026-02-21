@@ -16,7 +16,8 @@ class InstructionalMaterialSchema(Schema):
     ai_attempt = fields.Int(dump_only=True)
     s3_link = fields.Str(required=False, allow_none=True)  # Made optional for assignment workflow
     notes = fields.Str(required=False)
-    due_date = fields.Date(required=False)
+    due_date = fields.Date(required=False, allow_none=True)
+    semester = fields.Str(required=False, allow_none=True)
     created_by = fields.Str(required=True)
     created_at = fields.DateTime(dump_only=True)  
     updated_by = fields.Str(required=True)

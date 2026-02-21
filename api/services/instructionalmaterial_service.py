@@ -227,6 +227,7 @@ class InstructionalMaterialService:
                 updated_by=data['updated_by'],
                 notes=notes,
                 due_date=data.get('due_date'),
+                semester=data.get('semester'),
                 university_im_id=data.get('university_im_id'),
                 service_im_id=data.get('service_im_id'),
                 imerpimec_id=data.get('imerpimec_id'),

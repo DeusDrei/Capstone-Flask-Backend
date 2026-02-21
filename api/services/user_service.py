@@ -29,7 +29,8 @@ class UserService:
             birth_date=data['birth_date'],
             created_by=data['created_by'],
             updated_by=data['updated_by'],
-            middle_name=data.get('middle_name')
+            middle_name=data.get('middle_name'),
+            rank=data.get('rank')
         )
         
         db.session.add(new_user)
