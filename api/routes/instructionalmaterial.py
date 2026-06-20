@@ -19,6 +19,23 @@ def upload_pdf():
     Returns object key and analysis notes
     """
     try:
+        # Validate IM target first (when provided) to avoid orphaned S3 uploads.
+        im_id = request.form.get('im_id') or request.args.get('im_id')
+        im_id_int = None
+        if im_id not in (None, ""):
+            try:
+                im_id_int = int(im_id)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'im_id must be a valid integer'}), 400
+
+            existing_im = InstructionalMaterialService.get_instructional_material_by_id(im_id_int)
+            if not existing_im:
+                return jsonify({'error': f'Instructional Material with id {im_id_int} not found'}), 404
+            if existing_im.is_deleted:
+                return jsonify({
+                    'error': f'Instructional Material with id {im_id_int} is deleted. Restore it first.'
+                }), 409
+
         if 'pdf_file' not in request.files:
             return jsonify({'error': 'PDF file is required'}), 400
         
@@ -26,24 +43,26 @@ def upload_pdf():
         
         object_key, notes, temp_file_path = InstructionalMaterialService.process_pdf_file(pdf_file)
 
-        # If caller provided an im_id in the multipart form, persist the s3_link
-        # and notes into the Instructional Material record so uploads update assigned IMs.
-        try:
-            im_id = request.form.get('im_id') or request.args.get('im_id')
-            if im_id:
+        # If caller provided an im_id in the multipart form, persist s3_link and notes.
+        if im_id_int is not None:
+            validated = {
+                's3_link': object_key,
+                'notes': notes,
+                # preserve existing status/other fields by using partial update
+            }
+            updated = InstructionalMaterialService.update_instructional_material(im_id_int, validated)
+            if not updated:
+                existing_im = InstructionalMaterialService.get_instructional_material_by_id(im_id_int)
+                if existing_im and existing_im.is_deleted:
+                    return jsonify({
+                        'error': f'Instructional Material with id {im_id_int} is deleted. Restore it first.'
+                    }), 409
+                # Best-effort cleanup if DB row disappears between validation and update.
                 try:
-                    validated = {
-                        's3_link': object_key,
-                        'notes': notes,
-                        # preserve existing status/other fields by using partial update
-                    }
-                    InstructionalMaterialService.update_instructional_material(int(im_id), validated)
-                except Exception as e:
-                    # Log but don't fail the upload — return the s3_link regardless
-                    print(f"Failed to persist s3_link for im_id={im_id}: {e}")
-        except Exception:
-            # ignore any errors reading im_id
-            pass
+                    InstructionalMaterialService.delete_pdf_from_s3(object_key)
+                except Exception:
+                    pass
+                return jsonify({'error': f'Instructional Material with id {im_id_int} not found'}), 404
 
         if temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
@@ -55,6 +74,12 @@ def upload_pdf():
         }), 200
         
     except Exception as e:
+        # If upload succeeded but a later step failed, try to remove orphaned object.
+        if 'object_key' in locals() and object_key:
+            try:
+                InstructionalMaterialService.delete_pdf_from_s3(object_key)
+            except Exception:
+                pass
         if 'temp_file_path' in locals() and temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         return jsonify({'error': str(e)}), 400
@@ -154,8 +179,18 @@ def update_instructional_material(im_id):
             data = InstructionalMaterialSchema(partial=True).load(request.json)
             im = InstructionalMaterialService.update_instructional_material(im_id, data)
         
-        if not im or im.is_deleted:
+        if not im:
+            existing_im = InstructionalMaterialService.get_instructional_material_by_id(im_id)
+            if existing_im and existing_im.is_deleted:
+                return jsonify({
+                    'error': f'Instructional Material with id {im_id} is deleted. Restore it first.'
+                }), 409
             return jsonify({'error': 'Instructional Material not found'}), 404
+
+        if im.is_deleted:
+            return jsonify({
+                'error': f'Instructional Material with id {im_id} is deleted. Restore it first.'
+            }), 409
         
         return jsonify({
             'message': f'Instructional Material {im.version} updated successfully',
@@ -264,10 +299,24 @@ def get_deleted_instructional_materials():
 @jwt_required
 @roles_required('Technical Admin', 'PIMEC', 'UTLDO Admin')
 def restore_instructional_material(im_id):
-    success = InstructionalMaterialService.restore_instructional_material(im_id)
-    if not success:
+    reset_arg = request.args.get('reset_to_assignment', 'true').strip().lower()
+    reset_to_assignment = reset_arg not in ('false', '0', 'no', 'off')
+
+    im = InstructionalMaterialService.restore_instructional_material(
+        im_id,
+        reset_to_assignment=reset_to_assignment,
+    )
+    if not im:
         return jsonify({'error': 'Instructional Material not found or already active'}), 404
-    return jsonify({'message': 'Instructional Material restored successfully'}), 200
+
+    message = 'Instructional Material restored successfully'
+    if reset_to_assignment:
+        message = 'Instructional Material restored and reset to Assigned to Faculty (version 0)'
+
+    return jsonify({
+        'message': message,
+        'data': InstructionalMaterialSchema().dump(im),
+    }), 200
 
 @im_blueprint.route('/<int:im_id>/download', methods=['GET'])
 @jwt_required
