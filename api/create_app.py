@@ -1,0 +1,74 @@
+from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS
+from .config import Config
+from .extensions import db, migrate, api, ma, jwt
+from .routes import auth_blueprint, user_blueprint, department_blueprint, college_blueprint, subject_blueprint, universityim_blueprint, serviceim_blueprint, collegeincluded_blueprint, im_blueprint, author_blueprint, subject_department_blueprint, imerpimec_blueprint, departmentincluded_blueprint, activitylog_blueprint, requirements_blueprint, im_submission_blueprint, analytics_blueprint
+
+from .seeds.users import register_commands as register_users
+from .seeds.departments import register_commands as register_departments
+from .seeds.colleges import register_commands as register_colleges
+from .seeds.subjects import register_commands as register_subjects
+from .seeds.subject_departments import register_commands as register_subject_departments
+from .seeds.universityims import register_commands as register_universityims
+from .seeds.serviceims import register_commands as register_serviceims
+from .seeds.collegesincluded import register_commands as register_collegesincluded
+from .seeds.instructionalmaterials import register_commands as register_instructionalmaterials
+from .seeds.departmentsincluded import register_commands as register_departmentsincluded
+from .seeds.activitylogs import register_commands as register_activitylogs
+
+def create_app():
+    app = Flask(__name__)
+    
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = make_response()
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization")
+            response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS")
+            return response
+    
+    # Enable CORS for all domains on all routes with explicit headers
+    CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "Authorization"]}})
+
+    # Or enable CORS for specific domains only (recommended for production)
+    # CORS(app, resources={r"/*": {"origins": ["https://flutter-frontend.example.com", "https://angular-frontend.example.com"]}})
+    app.config.from_object(Config)
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+
+    db.init_app(app)
+    migrate.init_app(app, db)
+    ma.init_app(app)
+    jwt.init_app(app)
+    api.init_app(app)
+        
+    register_users(app)
+    register_departments(app)
+    register_colleges(app)
+    register_subjects(app)
+    register_universityims(app)
+    register_serviceims(app)
+    register_collegesincluded(app)
+    register_instructionalmaterials(app)
+    register_departmentsincluded(app)
+    register_subject_departments(app)
+    register_activitylogs(app)
+    
+    api.register_blueprint(auth_blueprint)
+    api.register_blueprint(user_blueprint)
+    api.register_blueprint(department_blueprint)
+    api.register_blueprint(college_blueprint)
+    api.register_blueprint(subject_blueprint)
+    api.register_blueprint(universityim_blueprint)
+    api.register_blueprint(serviceim_blueprint)
+    api.register_blueprint(collegeincluded_blueprint)
+    api.register_blueprint(im_blueprint)
+    api.register_blueprint(author_blueprint)
+    api.register_blueprint(subject_department_blueprint)
+    api.register_blueprint(imerpimec_blueprint)
+    api.register_blueprint(departmentincluded_blueprint)
+    api.register_blueprint(activitylog_blueprint)
+    api.register_blueprint(analytics_blueprint)
+    api.register_blueprint(requirements_blueprint)
+
+    return app
